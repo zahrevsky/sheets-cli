@@ -40,7 +40,7 @@ describe("CLI", () => {
       const { stdout } = await runCli(["--help"]);
 
       expect(stdout).toContain("auth");
-      expect(stdout).toContain("sheets");
+      expect(stdout).toContain("spreadsheet");
       expect(stdout).toContain("read");
       expect(stdout).toContain("append");
       expect(stdout).toContain("update");
@@ -286,18 +286,18 @@ describe("CLI", () => {
     });
   });
 
-  describe("sheets commands", () => {
-    test("sheets --help shows subcommands", async () => {
-      const { stdout, exitCode } = await runCli(["sheets", "--help"]);
+  describe("spreadsheet commands", () => {
+    test("spreadsheet --help shows subcommands", async () => {
+      const { stdout, exitCode } = await runCli(["spreadsheet", "--help"]);
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain("list");
+      expect(stdout).toContain("tabs");
     });
 
-    test("sheets list returns valid JSON", async () => {
-      const { stdout, exitCode } = await runCli(["sheets", "list"]);
+    test("spreadsheet tabs returns valid JSON", async () => {
+      const { stdout, exitCode } = await runCli(["spreadsheet", "tabs"]);
 
-      // Returns VALIDATION_ERROR (10) if no spreadsheet ID, AUTH_ERROR (20) if not authenticated, 0 if authenticated
       expect([0, 10, 20]).toContain(exitCode);
       const output = parseOutput(stdout);
       expect(output).not.toBeNull();
@@ -329,8 +329,8 @@ describe("CLI", () => {
   describe("global options", () => {
     test("--spreadsheet option is accepted", async () => {
       const { stdout } = await runCli([
-        "sheets",
-        "list",
+        "spreadsheet",
+        "tabs",
         "--spreadsheet",
         "custom-spreadsheet-id",
       ]);

@@ -78,7 +78,7 @@ echo 'export PATH="$PATH:/path/to/sheets-cli/dist"' >> ~/.zshrc
 
 1. Go to [Google Cloud Console → APIs](https://console.cloud.google.com/apis/library)
 2. Enable **Google Sheets API**
-3. Enable **Google Drive API** (required for `sheets find` command)
+3. Enable **Google Drive API** (required for `spreadsheet list` / `spreadsheet find`)
 
 ### 2. Create OAuth Credentials
 
@@ -108,7 +108,7 @@ Get the ID from your sheet URL: `docs.google.com/spreadsheets/d/<ID>/edit`
 ### 5. Use
 
 ```bash
-sheets-cli sheets list --spreadsheet <id>
+sheets-cli spreadsheet tabs --spreadsheet <id>
 sheets-cli read table --spreadsheet <id> --sheet "Sheet1" --limit 5
 sheets-cli append --spreadsheet <id> --sheet "Sheet1" --values '{"Name":"New Item","Status":"Active"}'
 ```
@@ -128,9 +128,9 @@ sheets-cli auth logout
 ### Metadata
 
 ```bash
-sheets-cli sheets spreadsheets [--name "<query>"] [--limit 100]  # All your files (Drive API)
-sheets-cli sheets list [--spreadsheet <id>]                       # Tabs inside one file
-sheets-cli sheets find --name "<query>" [--limit 10]              # Search by name (alias)
+sheets-cli spreadsheet list [--name "<query>"] [--limit 100]   # Your spreadsheet files (Drive)
+sheets-cli spreadsheet find --name "<query>" [--limit 10]      # Search files by name
+sheets-cli spreadsheet tabs [--spreadsheet <id>]                 # Tabs inside one file
 sheets-cli sheet info --sheet "<name>" [--spreadsheet <id>]
 sheets-cli sheet info --gid <gid> [--spreadsheet <id>]
 sheets-cli header --sheet "<name>" [--header-row 1]
@@ -282,7 +282,7 @@ sheets-cli update key --sheet "Tasks" --key-col "ID" --key "TASK-42" --set '{"St
 
 ### Best Practices
 
-1. **Use `sheets find`** to get spreadsheet ID from name
+1. **Use `spreadsheet find`** to get spreadsheet ID from name
 2. **Prefer key-based updates** over row indices—rows shift on insert/delete
 3. **Always dry-run** before writes
 4. **Check `ok` field** before proceeding
