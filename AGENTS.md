@@ -121,3 +121,15 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 ---
 
 Most formatting and common issues are automatically fixed by Biome. Run `bun x ultracite fix` before committing to ensure compliance.
+
+## Cursor Cloud specific instructions
+
+**Product:** `sheets-cli` is a pure CLI tool (no UI, no services to start). All commands are in `package.json` scripts — see README `## Development` for the full list.
+
+**Key commands:** `bun run lint`, `bun run test`, `bun run build`, `bun run typecheck`, `bun run dev`.
+
+**Bun path:** Bun is installed at `~/.bun/bin/bun`. The update script exports `PATH` automatically, but if you open a fresh shell you may need `export PATH="$HOME/.bun/bin:$PATH"`.
+
+**Typecheck caveat:** `bun run typecheck` (tsgo) has pre-existing errors in test files and `src/skill.ts` (missing `SKILL.md` module declaration). These are not regressions — they exist on the main branch.
+
+**E2E / Google API:** Full end-to-end testing requires Google OAuth credentials (`client_secret.json`) and a target spreadsheet. Unit tests mock the API and run without credentials. To test auth flow or live API calls, set `SHEETS_CLI_DEFAULT_SPREADSHEET_ID` and run `sheets-cli auth login --credentials <file>`.
