@@ -8,6 +8,7 @@
 | Список `batchUpdate` subrequests | `BATCH_UPDATE_REQUEST_KINDS` в [`src/api/request-types.ts`](../src/api/request-types.ts) | **Да, но синхронизируется** с `Schema$Request` из googleapis |
 | Удобные payload | [`src/builders/`](../src/builders/) | Да — наш слой; опционален при `request run` / `batch-raw` |
 | Табличная семантика | [`src/sheets.ts`](../src/sheets.ts) | Да — продуктовый слой поверх API |
+| Список файлов-таблиц | [`src/sheets/drive-spreadsheets.ts`](../src/sheets/drive-spreadsheets.ts) → Drive `files.list` | Нет дублирования API; только query builder |
 
 Мы **не** парсим сайт Google. Типы в `node_modules/googleapis/build/src/apis/sheets/v4.d.ts` генерируются из официального Discovery Document при релизе пакета `googleapis`.
 

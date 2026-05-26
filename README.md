@@ -128,8 +128,9 @@ sheets-cli auth logout
 ### Metadata
 
 ```bash
-sheets-cli sheets list [--spreadsheet <id>]
-sheets-cli sheets find --name "<query>" [--limit 10]  # Search by name
+sheets-cli sheets spreadsheets [--name "<query>"] [--limit 100]  # All your files (Drive API)
+sheets-cli sheets list [--spreadsheet <id>]                       # Tabs inside one file
+sheets-cli sheets find --name "<query>" [--limit 10]              # Search by name (alias)
 sheets-cli sheet info --sheet "<name>" [--spreadsheet <id>]
 sheets-cli sheet info --gid <gid> [--spreadsheet <id>]
 sheets-cli header --sheet "<name>" [--header-row 1]
