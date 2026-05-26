@@ -134,15 +134,36 @@ sheets-cli set range --spreadsheet <id> --range "Sheet1!A1:B2" \
   --values '<2d-json-array>' [--dry-run]
 ```
 
-### Batch Operations
+### Batch Operations (coalesced batchUpdate)
 ```bash
 sheets-cli batch --spreadsheet <id> --ops '<json-array>' [--dry-run]
 ```
-Operations: `append`, `updateRow`, `updateKey`, `setRange`.
+Operations: `append`, `updateRow`, `updateKey`, `setRange`, and `{ "op": "request", "request": { … } }` for any subrequest. All write ops in one `--ops` array are combined into **one** `spreadsheets.batchUpdate` HTTP call when possible. Dry-run returns planned `requests`.
 
-### Raw batchUpdate (any API request type)
+### Request by kind (all 70 API types)
+```bash
+sheets-cli request list
+sheets-cli request run --spreadsheet <id> --kind mergeCells --body '<json>' [--dry-run]
+```
+
+### Raw batchUpdate (JSON array of requests)
 ```bash
 sheets-cli batch-raw --spreadsheet <id> --requests '<json-array>' [--dry-run]
+```
+
+### Dimensions, sort, validation, protection
+```bash
+sheets-cli dimension insert --sheet "Tab" --dimension ROWS --start 0 --end 1 [--dry-run]
+sheets-cli dimension delete --sheet "Tab" --dimension COLUMNS --start 2 --end 4 [--dry-run]
+sheets-cli sort --range "Tab!A2:D100" --specs '[{"dimensionIndex":0,"sortOrder":"ASCENDING"}]' [--dry-run]
+sheets-cli validate set --range "Tab!A2:A100" --rule '<DataValidationRule json>' [--dry-run]
+sheets-cli protect add --body '<ProtectedRange json>' [--dry-run]
+sheets-cli protect delete --id 123456 [--dry-run]
+sheets-cli named-range add --body '<NamedRange json>' [--dry-run]
+sheets-cli named-range delete --id <namedRangeId> [--dry-run]
+sheets-cli paste --range "Tab!A1" --data "a,b,c" [--dry-run]
+sheets-cli autoresize --sheet "Tab" --dimension COLUMNS --start 0 --end 5 [--dry-run]
+sheets-cli borders --range "Tab!A1:B2" [--top '<Border json>'] [--dry-run]
 ```
 
 ### Sheet structure

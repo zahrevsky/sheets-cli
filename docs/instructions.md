@@ -24,12 +24,22 @@ sheets-cli update key --spreadsheet "$ID" --sheet "Tasks" \
   --key-col "ID" --key "TASK-42" --set '{"Status":"Done"}'
 ```
 
-## Advanced writes
+## Batch and advanced writes
 
-For spreadsheet structure, formatting, or API requests without a dedicated command:
+Coalesce several table ops into one API call:
 
 ```bash
-sheets-cli batch raw --spreadsheet "$ID" --requests '[{"updateCells":{...}}]' --dry-run
+sheets-cli batch --spreadsheet "$ID" --ops '[
+  {"op":"append","sheet":"Tasks","values":{"Name":"New"}},
+  {"op":"setRange","range":"Tasks!B2","values":[["Ready"]]}
+]' --dry-run
+```
+
+Any of the 70 `batchUpdate` request kinds:
+
+```bash
+sheets-cli request run --spreadsheet "$ID" --kind sortRange --body '{...}' --dry-run
+sheets-cli batch-raw --spreadsheet "$ID" --requests '[{"mergeCells":{...}}]' --dry-run
 ```
 
 See `docs/agent-contract.md` for JSON output shape.
