@@ -17,6 +17,8 @@ import {
   buildHideSheetRequest,
   buildShowSheetRequest,
 } from "./builders/sheets";
+import { registerExtendedCommands } from "./cli/extended-commands";
+import { registerRequestCommands } from "./cli/request-commands";
 import { error, exitCode, output, success } from "./output";
 import {
   appendRows,
@@ -1376,5 +1378,19 @@ program
       process.exit(40);
     }
   });
+
+const cliDeps = {
+  resolveSpreadsheet,
+  getSheets,
+  output,
+  handleApiError,
+  parseJsonObject,
+  parseIntOption,
+  resolveSheetId,
+  error,
+};
+
+registerRequestCommands(program, cliDeps, DEFAULT_SPREADSHEET_ID ?? "");
+registerExtendedCommands(program, cliDeps, DEFAULT_SPREADSHEET_ID ?? "");
 
 program.parse();

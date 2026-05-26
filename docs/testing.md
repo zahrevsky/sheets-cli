@@ -29,6 +29,18 @@ SHEETS_CLI_INTEGRATION=1 bun test src/__tests__/integration
 
 Creates a **new** spreadsheet only; never modifies user default spreadsheets.
 
+## GitHub Actions (optional)
+
+When repository secrets are configured, CI runs integration tests:
+
+| Secret | Purpose |
+|--------|---------|
+| `SHEETS_CLI_INTEGRATION` | Set to `1` to enable the integration job |
+| `SHEETS_CLI_CREDENTIALS_JSON` | OAuth client JSON (written to `~/.sheets-cli/credentials.json`) |
+| `SHEETS_CLI_TOKEN_JSON` | Refresh token JSON (written to `~/.sheets-cli/token.json`) |
+
+Without these secrets, CI still runs unit tests, typecheck, and Ultracite on every push/PR.
+
 ## Parity (phase B only)
 
 `src/__tests__/parity/` exists only during Values→batchUpdate migration and is removed after phase B.

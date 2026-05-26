@@ -16,3 +16,26 @@ jobs:
       - run: bun test
       - run: bun run typecheck
       - run: bun x ultracite check
+
+  integration:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SHEETS_CLI_INTEGRATION == '1' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - name: Integration tests (live Google API)
+        env:
+          SHEETS_CLI_INTEGRATION: "1"
+          SHEETS_CLI_CREDENTIALS_JSON: ${{ secrets.SHEETS_CLI_CREDENTIALS_JSON }}
+          SHEETS_CLI_TOKEN_JSON: ${{ secrets.SHEETS_CLI_TOKEN_JSON }}
+        run: |
+          if [ -n "$SHEETS_CLI_CREDENTIALS_JSON" ]; then
+            mkdir -p "$HOME/.sheets-cli"
+            echo "$SHEETS_CLI_CREDENTIALS_JSON" > "$HOME/.sheets-cli/credentials.json"
+          fi
+          if [ -n "$SHEETS_CLI_TOKEN_JSON" ]; then
+            mkdir -p "$HOME/.sheets-cli"
+            echo "$SHEETS_CLI_TOKEN_JSON" > "$HOME/.sheets-cli/token.json"
+          fi
+          bun test src/__tests__/integration

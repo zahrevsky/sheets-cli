@@ -20,6 +20,15 @@ const TOP_LEVEL_COMMANDS = [
   "find-replace",
   "merge",
   "unmerge",
+  "request",
+  "dimension",
+  "sort",
+  "validate",
+  "protect",
+  "named-range",
+  "paste",
+  "autoresize",
+  "borders",
   "install-skill",
 ];
 

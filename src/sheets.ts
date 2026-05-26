@@ -405,6 +405,7 @@ export async function appendRows(
     valueInputOption?: ValueInputOption;
     dryRun?: boolean;
     headerRow?: number;
+    collector?: sheets_v4.Schema$Request[];
   }
 ): Promise<{ updatedRange: string; updatedRows: number; dryRun: boolean }> {
   const quotedSheet = escapeSheetName(sheetName);
@@ -439,7 +440,7 @@ export async function appendRows(
       (h) => normalizedKeyToValue.get(normalizeHeader(h)) ?? ""
     );
 
-    if (opts.dryRun) {
+    if (opts.dryRun && !opts.collector) {
       return {
         updatedRange: `${quotedSheet}!A1`,
         updatedRows: 2,
@@ -447,20 +448,15 @@ export async function appendRows(
       };
     }
 
-    const sheetRef = await defaultSheetResolver.resolveByTitle(
+    const valueInputOption = opts.valueInputOption ?? "USER_ENTERED";
+    await writeRangeViaBatch(
       sheets,
       spreadsheetId,
-      sheetName
+      `${quotedSheet}!A1:${colToLetter(width)}2`,
+      [headers, row],
+      { valueInputOption, dryRun: false, collector: opts.collector }
     );
-    const valueInputOption = opts.valueInputOption ?? "USER_ENTERED";
-    if (!opts.dryRun) {
-      await writeRangeViaBatch(
-        sheets,
-        spreadsheetId,
-        `${quotedSheet}!A1:${colToLetter(width)}2`,
-        [headers, row],
-        { valueInputOption, dryRun: false }
-      );
+    if (!opts.collector) {
       defaultSheetResolver.invalidate(spreadsheetId);
     }
 
@@ -508,7 +504,7 @@ export async function appendRows(
     row.push(viaDisplay ?? "");
   }
 
-  if (opts.dryRun) {
+  if (opts.dryRun && !opts.collector) {
     return {
       updatedRange: `${quotedSheet}!${colToLetter(layout.startCol)}${layout.dataStartRow}`,
       updatedRows: 1,
@@ -527,6 +523,7 @@ export async function appendRows(
   await appendRowViaBatch(sheets, spreadsheetId, sheetRef.sheetId, row, {
     valueInputOption: opts.valueInputOption ?? "USER_ENTERED",
     dryRun: false,
+    collector: opts.collector,
   });
 
   return {
@@ -548,6 +545,7 @@ export async function updateByRowIndex(
     valueInputOption?: ValueInputOption;
     dryRun?: boolean;
     headerRow?: number;
+    collector?: sheets_v4.Schema$Request[];
   }
 ): Promise<{ updatedCells: number; updatedRange: string; dryRun: boolean }> {
   if (!Number.isFinite(rowIndex) || rowIndex < 1) {
@@ -601,7 +599,7 @@ export async function updateByRowIndex(
     });
   }
 
-  if (opts.dryRun) {
+  if (opts.dryRun && !opts.collector) {
     return {
       updatedCells: cellUpdates.length,
       updatedRange: rangeParts.join(", "),
@@ -618,7 +616,11 @@ export async function updateByRowIndex(
     spreadsheetId,
     sheetRef.sheetId,
     cellUpdates,
-    { valueInputOption: opts.valueInputOption ?? "USER_ENTERED", dryRun: false }
+    {
+      valueInputOption: opts.valueInputOption ?? "USER_ENTERED",
+      dryRun: false,
+      collector: opts.collector,
+    }
   );
 
   return {
@@ -640,6 +642,7 @@ export async function updateByKey(
     dryRun?: boolean;
     headerRow?: number;
     allowMulti?: boolean;
+    collector?: sheets_v4.Schema$Request[];
   }
 ): Promise<{
   matchedRows: number;
@@ -747,7 +750,7 @@ export async function updateByKey(
     }
   }
 
-  if (opts.dryRun) {
+  if (opts.dryRun && !opts.collector) {
     return {
       matchedRows: matchingRows.length,
       updatedCells: cellUpdates.length,
@@ -770,7 +773,11 @@ export async function updateByKey(
     spreadsheetId,
     sheetRef.sheetId,
     cellUpdates,
-    { valueInputOption: opts.valueInputOption ?? "USER_ENTERED", dryRun: false }
+    {
+      valueInputOption: opts.valueInputOption ?? "USER_ENTERED",
+      dryRun: false,
+      collector: opts.collector,
+    }
   );
 
   return {
@@ -786,9 +793,13 @@ export async function setRange(
   spreadsheetId: string,
   range: string,
   values: unknown[][],
-  opts: { valueInputOption?: ValueInputOption; dryRun?: boolean }
+  opts: {
+    valueInputOption?: ValueInputOption;
+    dryRun?: boolean;
+    collector?: sheets_v4.Schema$Request[];
+  }
 ): Promise<{ updatedRange: string; updatedCells: number; dryRun: boolean }> {
-  if (opts.dryRun) {
+  if (opts.dryRun && !opts.collector) {
     return {
       updatedRange: range,
       updatedCells: values.reduce((acc, row) => acc + row.length, 0),
@@ -799,6 +810,7 @@ export async function setRange(
   const write = await writeRangeViaBatch(sheets, spreadsheetId, range, values, {
     valueInputOption: opts.valueInputOption ?? "USER_ENTERED",
     dryRun: false,
+    collector: opts.collector,
   });
 
   return {
@@ -813,8 +825,17 @@ export async function batchOperations(
   spreadsheetId: string,
   operations: BatchOperation[],
   opts: { valueInputOption?: ValueInputOption; dryRun?: boolean }
-): Promise<{ results: unknown[]; dryRun: boolean }> {
+): Promise<{
+  results: unknown[];
+  dryRun: boolean;
+  subrequestCount: number;
+  batchHttpCalls: number;
+  requests?: sheets_v4.Schema$Request[];
+}> {
   const results: unknown[] = [];
+  const collector: sheets_v4.Schema$Request[] = [];
+  const valueInputOption = opts.valueInputOption ?? "USER_ENTERED";
+  const collectOpts = { valueInputOption, collector };
 
   for (const op of operations) {
     switch (op.op) {
@@ -824,7 +845,7 @@ export async function batchOperations(
           spreadsheetId,
           op.sheet,
           op.values,
-          opts
+          collectOpts
         );
         results.push({ op: "append", sheet: op.sheet, ...res });
         break;
@@ -836,7 +857,7 @@ export async function batchOperations(
           op.sheet,
           op.row,
           op.set,
-          opts
+          collectOpts
         );
         results.push({ op: "updateRow", sheet: op.sheet, row: op.row, ...res });
         break;
@@ -849,7 +870,7 @@ export async function batchOperations(
           op.keyCol,
           op.key,
           op.set,
-          { ...opts, allowMulti: op.allowMulti }
+          { ...collectOpts, allowMulti: op.allowMulti }
         );
         results.push({
           op: "updateKey",
@@ -866,9 +887,14 @@ export async function batchOperations(
           spreadsheetId,
           op.range,
           op.values,
-          opts
+          collectOpts
         );
         results.push({ op: "setRange", range: op.range, ...res });
+        break;
+      }
+      case "request": {
+        collector.push(op.request);
+        results.push({ op: "request", kind: Object.keys(op.request)[0] });
         break;
       }
       default:
@@ -876,7 +902,32 @@ export async function batchOperations(
     }
   }
 
-  return { results, dryRun: opts.dryRun ?? false };
+  const dryRun = opts.dryRun ?? false;
+  let batchHttpCalls = 0;
+
+  if (dryRun) {
+    return {
+      results,
+      dryRun: true,
+      subrequestCount: collector.length,
+      batchHttpCalls: 0,
+      requests: collector,
+    };
+  }
+
+  if (collector.length > 0) {
+    const { runBatchWrite } = await import("./sheets/batch-write");
+    const run = await runBatchWrite(sheets, spreadsheetId, collector, false);
+    batchHttpCalls = run.requestCount;
+    defaultSheetResolver.invalidate(spreadsheetId);
+  }
+
+  return {
+    results,
+    dryRun: false,
+    subrequestCount: collector.length,
+    batchHttpCalls,
+  };
 }
 
 function colToLetter(col: number): string {

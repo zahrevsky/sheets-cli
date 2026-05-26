@@ -69,6 +69,10 @@ export type BatchOperation =
       op: "setRange";
       range: string;
       values: unknown[][];
+    }
+  | {
+      op: "request";
+      request: Record<string, unknown>;
     };
 
 export type ValueInputOption = "USER_ENTERED" | "RAW";

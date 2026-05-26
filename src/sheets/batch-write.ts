@@ -10,13 +10,19 @@ import {
   parseA1RangeToGrid,
 } from "../builders/grid-range";
 import type { ValueInputOption } from "../types";
+import { cellUpdatesToRequests } from "./cell-updates";
 
 export async function runBatchWrite(
   sheets: sheets_v4.Sheets,
   spreadsheetId: string,
   requests: sheets_v4.Schema$Request[],
-  dryRun: boolean
+  dryRun: boolean,
+  collector?: sheets_v4.Schema$Request[]
 ): Promise<{ requestCount: number; requests: sheets_v4.Schema$Request[] }> {
+  if (collector) {
+    collector.push(...requests);
+    return { requestCount: 0, requests };
+  }
   if (dryRun) {
     return { requestCount: 0, requests };
   }
@@ -33,7 +39,11 @@ export async function writeRangeViaBatch(
   spreadsheetId: string,
   range: string,
   values: unknown[][],
-  opts: { valueInputOption: ValueInputOption; dryRun?: boolean }
+  opts: {
+    valueInputOption: ValueInputOption;
+    dryRun?: boolean;
+    collector?: sheets_v4.Schema$Request[];
+  }
 ): Promise<{ updatedCells: number; requestCount: number }> {
   const sheetName = extractSheetNameFromRange(range);
   if (!sheetName) {
@@ -57,7 +67,8 @@ export async function writeRangeViaBatch(
     sheets,
     spreadsheetId,
     [request],
-    opts.dryRun ?? false
+    opts.dryRun ?? false,
+    opts.collector
   );
   const cells = values.reduce((acc, row) => acc + row.length, 0);
   return { updatedCells: cells, requestCount: run.requestCount };
@@ -68,7 +79,11 @@ export async function appendRowViaBatch(
   spreadsheetId: string,
   sheetId: number,
   row: unknown[],
-  opts: { valueInputOption: ValueInputOption; dryRun?: boolean }
+  opts: {
+    valueInputOption: ValueInputOption;
+    dryRun?: boolean;
+    collector?: sheets_v4.Schema$Request[];
+  }
 ): Promise<{ requestCount: number }> {
   const request = buildAppendCellsRequest({
     sheetId,
@@ -79,7 +94,8 @@ export async function appendRowViaBatch(
     sheets,
     spreadsheetId,
     [request],
-    opts.dryRun ?? false
+    opts.dryRun ?? false,
+    opts.collector
   );
   return { requestCount: run.requestCount };
 }
@@ -89,53 +105,28 @@ export async function writeCellsViaBatch(
   spreadsheetId: string,
   sheetId: number,
   updates: { rowIndex: number; colIndex: number; value: unknown }[],
-  opts: { valueInputOption: ValueInputOption; dryRun?: boolean }
+  opts: {
+    valueInputOption: ValueInputOption;
+    dryRun?: boolean;
+    collector?: sheets_v4.Schema$Request[];
+  }
 ): Promise<{ updatedCells: number; requestCount: number }> {
   if (updates.length === 0) {
     return { updatedCells: 0, requestCount: 0 };
   }
 
-  const byRow = new Map<number, Map<number, unknown>>();
-  for (const u of updates) {
-    let row = byRow.get(u.rowIndex);
-    if (!row) {
-      row = new Map();
-      byRow.set(u.rowIndex, row);
-    }
-    row.set(u.colIndex, u.value);
-  }
-
-  const requests: sheets_v4.Schema$Request[] = [];
-  for (const [rowIndex, cols] of byRow) {
-    const colIndices = [...cols.keys()].sort((a, b) => a - b);
-    const startCol = colIndices[0] ?? 0;
-    const endCol = (colIndices.at(-1) ?? startCol) + 1;
-    const values: unknown[][] = [
-      Array.from({ length: endCol - startCol }, (_, i) => {
-        const col = startCol + i;
-        return cols.get(col) ?? "";
-      }),
-    ];
-    requests.push(
-      buildUpdateCellsRequest({
-        range: {
-          sheetId,
-          startRowIndex: rowIndex,
-          endRowIndex: rowIndex + 1,
-          startColumnIndex: startCol,
-          endColumnIndex: endCol,
-        },
-        values,
-        valueInputOption: opts.valueInputOption,
-      })
-    );
-  }
+  const requests = cellUpdatesToRequests(
+    sheetId,
+    updates,
+    opts.valueInputOption
+  );
 
   const run = await runBatchWrite(
     sheets,
     spreadsheetId,
     requests,
-    opts.dryRun ?? false
+    opts.dryRun ?? false,
+    opts.collector
   );
   return { updatedCells: updates.length, requestCount: run.requestCount };
 }

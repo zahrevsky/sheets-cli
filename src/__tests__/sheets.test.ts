@@ -732,7 +732,7 @@ describe("sheets API functions", () => {
   describe("batchOperations", async () => {
     const { batchOperations } = await import("../sheets");
 
-    test("executes multiple operations", async () => {
+    test("executes multiple operations in one batchUpdate", async () => {
       const mockSheets = createMockSheets();
 
       mockSheets.spreadsheets.values.get = mock(() =>
@@ -753,6 +753,30 @@ describe("sheets API functions", () => {
 
       expect(result.results).toHaveLength(2);
       expect(result.dryRun).toBe(false);
+      expect(result.subrequestCount).toBeGreaterThanOrEqual(2);
+      expect(result.batchHttpCalls).toBe(1);
+      expect(mockSheets.spreadsheets.batchUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    test("dry-run returns planned requests without batchUpdate", async () => {
+      const mockSheets = createMockSheets();
+
+      mockSheets.spreadsheets.values.get = mock(() =>
+        Promise.resolve({
+          data: { values: [["Name"]], range: "Sheet1!A1:A1" },
+        })
+      );
+
+      const result = await batchOperations(
+        mockSheets as never,
+        "spreadsheet-id",
+        [{ op: "setRange", range: "Sheet1!A1", values: [["x"]] }],
+        { dryRun: true }
+      );
+
+      expect(result.dryRun).toBe(true);
+      expect(result.requests?.length).toBeGreaterThan(0);
+      expect(mockSheets.spreadsheets.batchUpdate).not.toHaveBeenCalled();
     });
 
     test("respects dry-run for all operations", async () => {
