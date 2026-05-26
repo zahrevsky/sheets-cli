@@ -208,7 +208,7 @@ async function getTableLayout(
   if (headerRow !== undefined) {
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${quotedSheet}!${headerRow}:${headerRow}`,
+      range: `${quotedSheet}!A${headerRow}:ZZ${headerRow}`,
       valueRenderOption: "FORMATTED_VALUE",
     });
     const start = parseA1Start(res.data.range);
@@ -231,7 +231,7 @@ async function getTableLayout(
   for (const scanRows of scanSteps) {
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${quotedSheet}!1:${scanRows}`,
+      range: `${quotedSheet}!A1:ZZ${scanRows}`,
       valueRenderOption: "FORMATTED_VALUE",
     });
 

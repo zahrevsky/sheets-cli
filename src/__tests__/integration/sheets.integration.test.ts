@@ -28,19 +28,25 @@ describe.skipIf(!INTEGRATION)("sheets integration", () => {
       throw new Error("Failed to create test spreadsheet");
     }
 
+    const sheets = getSheetsClient(auth);
+    const meta = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheetName = meta.data.sheets?.[0]?.properties?.title;
+    if (!sheetName) {
+      throw new Error("Spreadsheet has no sheets");
+    }
+
     try {
-      const sheets = getSheetsClient(auth);
       await appendRows(
         sheets,
         spreadsheetId,
-        "Sheet1",
+        sheetName,
         {
           Name: "Integration",
           Status: "ok",
         },
         {}
       );
-      const table = await readTableData(sheets, spreadsheetId, "Sheet1", {
+      const table = await readTableData(sheets, spreadsheetId, sheetName, {
         limit: 5,
       });
       expect(table.rows.length).toBeGreaterThan(0);
