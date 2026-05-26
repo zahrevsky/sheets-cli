@@ -34,6 +34,7 @@ import {
   updateByKey,
   updateByRowIndex,
 } from "./sheets";
+import { listSpreadsheetsInDrive } from "./sheets/drive-spreadsheets";
 import { executeSpreadsheetRequests } from "./sheets/execute-requests";
 import { SKILL_CONTENT } from "./skill";
 import type { BatchOperation, Result, ValueInputOption } from "./types";
