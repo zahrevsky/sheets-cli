@@ -7,7 +7,7 @@ const ROOT = join(import.meta.dir, "../../..");
 
 const TOP_LEVEL_COMMANDS = [
   "auth",
-  "sheets",
+  "spreadsheet",
   "sheet",
   "header",
   "read",

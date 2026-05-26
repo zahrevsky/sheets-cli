@@ -17,11 +17,11 @@ See `docs/instructions.md` and `docs/agent-contract.md` in the repo for output s
 
 ```bash
 # Find spreadsheet by name
-sheets-cli sheets spreadsheets [--name "Projects"] [--limit 100]
-sheets-cli sheets find --name "Projects"
+sheets-cli spreadsheet list [--name "Projects"] [--limit 100]
+sheets-cli spreadsheet find --name "Projects"
 
 # List sheets/tabs
-sheets-cli sheets list --spreadsheet <id-or-url>
+sheets-cli spreadsheet tabs --spreadsheet <id-or-url>
 
 # Read table data
 sheets-cli read table --spreadsheet <id> --sheet "Sheet1" --limit 100
@@ -63,8 +63,8 @@ sheets-cli auth logout
 
 ### Find Spreadsheet by Name
 ```bash
-sheets-cli sheets spreadsheets [--name "<query>"] [--limit 100] [--page-token <token>]
-sheets-cli sheets find --name "<query>" [--limit 10]
+sheets-cli spreadsheet list [--name "<query>"] [--limit 100] [--page-token <token>]
+sheets-cli spreadsheet find --name "<query>" [--limit 10]
 ```
 Searches Google Drive for spreadsheets matching the name. Returns ID, name, URL.
 
@@ -72,7 +72,7 @@ Searches Google Drive for spreadsheets matching the name. Returns ID, name, URL.
 
 ### List Sheets/Tabs
 ```bash
-sheets-cli sheets list --spreadsheet <id>
+sheets-cli spreadsheet tabs --spreadsheet <id>
 ```
 
 ### Sheet Info
@@ -226,7 +226,7 @@ Errors:
 
 ## Best Practices
 
-1. **Use `sheets find`** to get spreadsheet ID from name
+1. **Use `spreadsheet find`** to get spreadsheet ID from name
 2. **`--spreadsheet` accepts URLs** - paste full Google Sheets URL directly
 3. **Prefer key-based updates** over row indices - rows shift on insert/delete
 4. **Always dry-run** before writes

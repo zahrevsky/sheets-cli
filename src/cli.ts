@@ -20,6 +20,7 @@ import {
 import { registerDoctorCommands } from "./cli/doctor-commands";
 import { registerExtendedCommands } from "./cli/extended-commands";
 import { registerRequestCommands } from "./cli/request-commands";
+import { registerSpreadsheetCommands } from "./cli/spreadsheet-commands";
 import { error, exitCode, output, success } from "./output";
 import {
   appendRows,
@@ -34,7 +35,6 @@ import {
   updateByKey,
   updateByRowIndex,
 } from "./sheets";
-import { listSpreadsheetsInDrive } from "./sheets/drive-spreadsheets";
 import { executeSpreadsheetRequests } from "./sheets/execute-requests";
 import { SKILL_CONTENT } from "./skill";
 import type { BatchOperation, Result, ValueInputOption } from "./types";
@@ -257,130 +257,9 @@ auth
     }
   });
 
-// Sheets metadata commands
-const sheets = program.command("sheets").description("Spreadsheet metadata");
-
-sheets
-  .command("list")
-  .description("List all sheets/tabs in a spreadsheet")
-  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
-  .action(async (opts) => {
-    const cmd = "sheets list";
-    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
-    if (!spreadsheetId) {
-      return process.exit(10);
-    }
-    const client = await getSheets(cmd);
-    if (!client) {
-      return process.exit(20);
-    }
-
-    try {
-      const sheetsList = await listSheets(client, spreadsheetId);
-      output(success(cmd, { sheets: sheetsList }, { spreadsheetId }));
-      process.exit(0);
-    } catch (err) {
-      const result = handleApiError(cmd, err, spreadsheetId);
-      output(result);
-      process.exit(exitCode(result));
-    }
-  });
-
-sheets
-  .command("spreadsheets")
-  .description("List your Google Spreadsheets (Drive API)")
-  .option("--name <query>", "Filter by name (substring)")
-  .option("--limit <n>", "Max results per page (1–1000)", "100")
-  .option("--page-token <token>", "Drive API page token for next page")
-  .action(async (opts) => {
-    const cmd = "sheets spreadsheets";
-    const authClient = await getAuthClient();
-    if (!authClient) {
-      output(
-        error(
-          cmd,
-          "AUTH_ERROR",
-          "Not authenticated. Run 'sheets-cli auth login' first."
-        )
-      );
-      return process.exit(20);
-    }
-
-    const limit = parsePositiveIntOption(cmd, "--limit", opts.limit);
-    if (limit === null) {
-      return process.exit(10);
-    }
-
-    try {
-      const result = await listSpreadsheetsInDrive(authClient, {
-        nameQuery: opts.name,
-        limit,
-        pageToken: opts.pageToken,
-      });
-      output(
-        success(
-          cmd,
-          {
-            query: opts.name ?? null,
-            ...result,
-          },
-          {}
-        )
-      );
-      process.exit(0);
-    } catch (err) {
-      const result = handleApiError(cmd, err);
-      output(result);
-      process.exit(exitCode(result));
-    }
-  });
-
-sheets
-  .command("find")
-  .description("Search spreadsheets by name (alias; use sheets spreadsheets)")
-  .requiredOption("--name <query>", "Name to search for")
-  .option("--limit <n>", "Max results", "10")
-  .action(async (opts) => {
-    const cmd = "sheets find";
-    const authClient = await getAuthClient();
-    if (!authClient) {
-      output(
-        error(
-          cmd,
-          "AUTH_ERROR",
-          "Not authenticated. Run 'sheets-cli auth login' first."
-        )
-      );
-      return process.exit(20);
-    }
-
-    const limit = parsePositiveIntOption(cmd, "--limit", opts.limit);
-    if (limit === null) {
-      return process.exit(10);
-    }
-
-    try {
-      const result = await listSpreadsheetsInDrive(authClient, {
-        nameQuery: opts.name,
-        limit,
-      });
-      output(
-        success(cmd, {
-          query: opts.name,
-          count: result.count,
-          spreadsheets: result.spreadsheets,
-          nextPageToken: result.nextPageToken,
-        })
-      );
-      process.exit(0);
-    } catch (err) {
-      const result = handleApiError(cmd, err);
-      output(result);
-      process.exit(exitCode(result));
-    }
-  });
-
-const sheetCmd = program.command("sheet").description("Sheet operations");
+const sheetCmd = program
+  .command("sheet")
+  .description("Sheet (tab) operations inside a spreadsheet");
 
 sheetCmd
   .command("info")
@@ -1430,10 +1309,15 @@ const cliDeps = {
   handleApiError,
   parseJsonObject,
   parseIntOption,
+  parsePositiveIntOption,
   resolveSheetId,
   error,
 };
 
+registerSpreadsheetCommands(program, {
+  ...cliDeps,
+  defaultSpreadsheetId: DEFAULT_SPREADSHEET_ID ?? "",
+});
 registerRequestCommands(program, cliDeps, DEFAULT_SPREADSHEET_ID ?? "");
 registerExtendedCommands(program, cliDeps, DEFAULT_SPREADSHEET_ID ?? "");
 registerDoctorCommands(program, { output });
