@@ -132,4 +132,9 @@ Most formatting and common issues are automatically fixed by Biome. Run `bun x u
 
 **Typecheck caveat:** `bun run typecheck` (tsgo) has pre-existing errors in test files and `src/skill.ts` (missing `SKILL.md` module declaration). These are not regressions — they exist on the main branch.
 
-**E2E / Google API:** Full end-to-end testing requires Google OAuth credentials (`client_secret.json`) and a target spreadsheet. Unit tests mock the API and run without credentials. To test auth flow or live API calls, set `SHEETS_CLI_DEFAULT_SPREADSHEET_ID` and run `sheets-cli auth login --credentials <file>`.
+**E2E / Google API:** Unit tests mock the API and run without credentials. For live API calls, the update script writes Cursor secrets to `~/.sheets-cli/` files automatically:
+- `SHEETS_CLI_TOKEN_JSON` → `~/.sheets-cli/token.json` (OAuth tokens with refresh_token)
+- `SHEETS_CLI_CREDENTIALS_JSON` → `~/.sheets-cli/credentials.json` (OAuth client_id/secret)
+- Optionally set `SHEETS_CLI_DEFAULT_SPREADSHEET_ID` to avoid passing `--spreadsheet` every time.
+
+After secrets are provisioned, `bun ./src/cli.ts auth status` should return `"authenticated": true`.
