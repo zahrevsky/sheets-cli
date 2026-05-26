@@ -17,6 +17,7 @@ import {
   buildHideSheetRequest,
   buildShowSheetRequest,
 } from "./builders/sheets";
+import { registerDoctorCommands } from "./cli/doctor-commands";
 import { registerExtendedCommands } from "./cli/extended-commands";
 import { registerRequestCommands } from "./cli/request-commands";
 import { error, exitCode, output, success } from "./output";
@@ -1392,5 +1393,6 @@ const cliDeps = {
 
 registerRequestCommands(program, cliDeps, DEFAULT_SPREADSHEET_ID ?? "");
 registerExtendedCommands(program, cliDeps, DEFAULT_SPREADSHEET_ID ?? "");
+registerDoctorCommands(program, { output });
 
 program.parse();

@@ -140,7 +140,13 @@ sheets-cli batch --spreadsheet <id> --ops '<json-array>' [--dry-run]
 ```
 Operations: `append`, `updateRow`, `updateKey`, `setRange`, and `{ "op": "request", "request": { … } }` for any subrequest. All write ops in one `--ops` array are combined into **one** `spreadsheets.batchUpdate` HTTP call when possible. Dry-run returns planned `requests`.
 
-### Request by kind (all 70 API types)
+### API coupling check
+```bash
+sheets-cli doctor api
+```
+Verifies `BATCH_UPDATE_REQUEST_KINDS` matches installed `googleapis` `Schema$Request` keys.
+
+### Request by kind (all API subrequest types)
 ```bash
 sheets-cli request list
 sheets-cli request run --spreadsheet <id> --kind mergeCells --body '<json>' [--dry-run]
