@@ -1,6 +1,22 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
+import { defaultSheetResolver } from "./api/sheet-resolver";
 import { getAuthClient, getAuthStatus, login, logout } from "./auth";
+import { buildFindReplaceRequest } from "./builders/dimensions";
+import {
+  buildAddConditionalFormatRuleRequest,
+  buildDeleteConditionalFormatRuleRequest,
+  buildMergeCellsRequest,
+  buildUnmergeCellsRequest,
+} from "./builders/formatting";
+import { parseA1RangeToGrid } from "./builders/grid-range";
+import {
+  buildAddSheetRequest,
+  buildDeleteSheetRequest,
+  buildDuplicateSheetRequest,
+  buildHideSheetRequest,
+  buildShowSheetRequest,
+} from "./builders/sheets";
 import { error, exitCode, output, success } from "./output";
 import {
   appendRows,
@@ -15,6 +31,7 @@ import {
   updateByKey,
   updateByRowIndex,
 } from "./sheets";
+import { executeSpreadsheetRequests } from "./sheets/execute-requests";
 import { SKILL_CONTENT } from "./skill";
 import type { BatchOperation, Result, ValueInputOption } from "./types";
 import { DEFAULT_SPREADSHEET_ID, parseSpreadsheetId } from "./types";
@@ -317,11 +334,11 @@ sheets
     }
   });
 
-// Sheet info command
-program
-  .command("sheet")
-  .description("Get sheet info")
+const sheetCmd = program.command("sheet").description("Sheet operations");
+
+sheetCmd
   .command("info")
+  .description("Get sheet info")
   .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
   .option("--sheet <name>", "Sheet name")
   .option("--gid <gid>", "Sheet GID")
@@ -377,6 +394,491 @@ program
       const result = handleApiError(cmd, err, spreadsheetId, opts.sheet);
       output(result);
       process.exit(exitCode(result));
+    }
+  });
+
+async function resolveSheetId(
+  cmd: string,
+  client: ReturnType<typeof getSheetsClient>,
+  spreadsheetId: string,
+  sheetName: string
+): Promise<number | null> {
+  const sheet = await defaultSheetResolver.resolveByTitle(
+    client,
+    spreadsheetId,
+    sheetName
+  );
+  if (!sheet) {
+    output(error(cmd, "VALIDATION_ERROR", `Sheet "${sheetName}" not found`));
+    return null;
+  }
+  return sheet.sheetId;
+}
+
+sheetCmd
+  .command("add")
+  .description("Add a sheet tab")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--title <title>", "New sheet title")
+  .option("--dry-run", "Preview batchUpdate requests")
+  .action(async (opts) => {
+    const cmd = "sheet add";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    try {
+      const requests = [buildAddSheetRequest({ title: opts.title })];
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        requests,
+        Boolean(opts.dryRun)
+      );
+      defaultSheetResolver.invalidate(spreadsheetId);
+      output(success(cmd, result, { spreadsheetId, sheet: opts.title }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId);
+      output(res);
+      process.exit(exitCode(res));
+    }
+  });
+
+sheetCmd
+  .command("delete")
+  .description("Delete a sheet tab")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--sheet <name>", "Sheet name to delete")
+  .option("--dry-run", "Preview batchUpdate requests")
+  .action(async (opts) => {
+    const cmd = "sheet delete";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    const sheetId = await resolveSheetId(
+      cmd,
+      client,
+      spreadsheetId,
+      opts.sheet
+    );
+    if (sheetId === null) {
+      return process.exit(10);
+    }
+    try {
+      const requests = [buildDeleteSheetRequest(sheetId)];
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        requests,
+        Boolean(opts.dryRun)
+      );
+      defaultSheetResolver.invalidate(spreadsheetId);
+      output(success(cmd, result, { spreadsheetId, sheet: opts.sheet }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId, opts.sheet);
+      output(res);
+      process.exit(exitCode(res));
+    }
+  });
+
+sheetCmd
+  .command("hide")
+  .description("Hide a sheet tab")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--sheet <name>", "Sheet name")
+  .option("--dry-run", "Preview batchUpdate requests")
+  .action(async (opts) => {
+    const cmd = "sheet hide";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    const sheetId = await resolveSheetId(
+      cmd,
+      client,
+      spreadsheetId,
+      opts.sheet
+    );
+    if (sheetId === null) {
+      return process.exit(10);
+    }
+    try {
+      const requests = [buildHideSheetRequest(sheetId)];
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        requests,
+        Boolean(opts.dryRun)
+      );
+      output(success(cmd, result, { spreadsheetId, sheet: opts.sheet }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId, opts.sheet);
+      output(res);
+      process.exit(exitCode(res));
+    }
+  });
+
+sheetCmd
+  .command("show")
+  .description("Unhide a sheet tab")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--sheet <name>", "Sheet name")
+  .option("--dry-run", "Preview batchUpdate requests")
+  .action(async (opts) => {
+    const cmd = "sheet show";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    const sheetId = await resolveSheetId(
+      cmd,
+      client,
+      spreadsheetId,
+      opts.sheet
+    );
+    if (sheetId === null) {
+      return process.exit(10);
+    }
+    try {
+      const requests = [buildShowSheetRequest(sheetId)];
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        requests,
+        Boolean(opts.dryRun)
+      );
+      output(success(cmd, result, { spreadsheetId, sheet: opts.sheet }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId, opts.sheet);
+      output(res);
+      process.exit(exitCode(res));
+    }
+  });
+
+sheetCmd
+  .command("duplicate")
+  .description("Duplicate a sheet tab")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--sheet <name>", "Source sheet name")
+  .option("--new-name <name>", "New sheet name")
+  .option("--dry-run", "Preview batchUpdate requests")
+  .action(async (opts) => {
+    const cmd = "sheet duplicate";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    const sheetId = await resolveSheetId(
+      cmd,
+      client,
+      spreadsheetId,
+      opts.sheet
+    );
+    if (sheetId === null) {
+      return process.exit(10);
+    }
+    try {
+      const requests = [
+        buildDuplicateSheetRequest({
+          sourceSheetId: sheetId,
+          newSheetName: opts.newName,
+        }),
+      ];
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        requests,
+        Boolean(opts.dryRun)
+      );
+      defaultSheetResolver.invalidate(spreadsheetId);
+      output(success(cmd, result, { spreadsheetId, sheet: opts.sheet }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId, opts.sheet);
+      output(res);
+      process.exit(exitCode(res));
+    }
+  });
+
+const formatCmd = program.command("format").description("Formatting commands");
+
+formatCmd
+  .command("conditional-add")
+  .description("Add a conditional format rule (JSON rule body)")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--sheet <name>", "Sheet name")
+  .requiredOption("--rule <json>", "ConditionalFormatRule JSON")
+  .option("--index <n>", "Rule index", "0")
+  .option("--dry-run", "Preview batchUpdate requests")
+  .action(async (opts) => {
+    const cmd = "format conditional-add";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    const sheetId = await resolveSheetId(
+      cmd,
+      client,
+      spreadsheetId,
+      opts.sheet
+    );
+    if (sheetId === null) {
+      return process.exit(10);
+    }
+    const rule = parseJsonObject(cmd, "--rule", opts.rule);
+    if (!rule) {
+      return process.exit(10);
+    }
+    const index = parseIntOption(cmd, "--index", opts.index) ?? 0;
+    try {
+      const requests = [
+        buildAddConditionalFormatRuleRequest({
+          index,
+          rule: rule as never,
+        }),
+      ];
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        requests,
+        Boolean(opts.dryRun)
+      );
+      output(success(cmd, result, { spreadsheetId, sheet: opts.sheet }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId, opts.sheet);
+      output(res);
+      process.exit(exitCode(res));
+    }
+  });
+
+formatCmd
+  .command("conditional-delete")
+  .description("Delete a conditional format rule by index")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--sheet <name>", "Sheet name")
+  .requiredOption("--index <n>", "Rule index")
+  .option("--dry-run", "Preview batchUpdate requests")
+  .action(async (opts) => {
+    const cmd = "format conditional-delete";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    const sheetId = await resolveSheetId(
+      cmd,
+      client,
+      spreadsheetId,
+      opts.sheet
+    );
+    if (sheetId === null) {
+      return process.exit(10);
+    }
+    const index = parseIntOption(cmd, "--index", opts.index);
+    if (index === null) {
+      return process.exit(10);
+    }
+    try {
+      const requests = [
+        buildDeleteConditionalFormatRuleRequest({ sheetId, index }),
+      ];
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        requests,
+        Boolean(opts.dryRun)
+      );
+      output(success(cmd, result, { spreadsheetId, sheet: opts.sheet }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId, opts.sheet);
+      output(res);
+      process.exit(exitCode(res));
+    }
+  });
+
+program
+  .command("find-replace")
+  .description("Find and replace text in a sheet")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--sheet <name>", "Sheet name")
+  .requiredOption("--find <text>", "Find text")
+  .requiredOption("--replacement <text>", "Replacement text")
+  .option("--match-case", "Match case")
+  .option("--dry-run", "Preview batchUpdate requests")
+  .action(async (opts) => {
+    const cmd = "find-replace";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    const sheetId = await resolveSheetId(
+      cmd,
+      client,
+      spreadsheetId,
+      opts.sheet
+    );
+    if (sheetId === null) {
+      return process.exit(10);
+    }
+    try {
+      const requests = [
+        buildFindReplaceRequest({
+          sheetId,
+          find: opts.find,
+          replacement: opts.replacement,
+          matchCase: Boolean(opts.matchCase),
+        }),
+      ];
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        requests,
+        Boolean(opts.dryRun)
+      );
+      output(success(cmd, result, { spreadsheetId, sheet: opts.sheet }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId, opts.sheet);
+      output(res);
+      process.exit(exitCode(res));
+    }
+  });
+
+program
+  .command("merge")
+  .description("Merge a cell range")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--range <range>", "A1 range with sheet name")
+  .option("--dry-run", "Preview batchUpdate requests")
+  .action(async (opts) => {
+    const cmd = "merge";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    const sheetName = opts.range.includes("!")
+      ? opts.range.split("!")[0]?.replace(/^'|'$/g, "")
+      : null;
+    if (!sheetName) {
+      output(error(cmd, "VALIDATION_ERROR", "Range must include sheet name"));
+      return process.exit(10);
+    }
+    const sheetId = await resolveSheetId(
+      cmd,
+      client,
+      spreadsheetId,
+      sheetName.replaceAll("''", "'")
+    );
+    if (sheetId === null) {
+      return process.exit(10);
+    }
+    try {
+      const grid = parseA1RangeToGrid(opts.range, sheetId);
+      const requests = [buildMergeCellsRequest(grid)];
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        requests,
+        Boolean(opts.dryRun)
+      );
+      output(success(cmd, result, { spreadsheetId }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId);
+      output(res);
+      process.exit(exitCode(res));
+    }
+  });
+
+program
+  .command("unmerge")
+  .description("Unmerge a cell range")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--range <range>", "A1 range with sheet name")
+  .option("--dry-run", "Preview batchUpdate requests")
+  .action(async (opts) => {
+    const cmd = "unmerge";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    const sheetName = opts.range.includes("!")
+      ? opts.range.split("!")[0]?.replace(/^'|'$/g, "")
+      : null;
+    if (!sheetName) {
+      output(error(cmd, "VALIDATION_ERROR", "Range must include sheet name"));
+      return process.exit(10);
+    }
+    const sheetId = await resolveSheetId(
+      cmd,
+      client,
+      spreadsheetId,
+      sheetName.replaceAll("''", "'")
+    );
+    if (sheetId === null) {
+      return process.exit(10);
+    }
+    try {
+      const grid = parseA1RangeToGrid(opts.range, sheetId);
+      const requests = [buildUnmergeCellsRequest(grid)];
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        requests,
+        Boolean(opts.dryRun)
+      );
+      output(success(cmd, result, { spreadsheetId }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId);
+      output(res);
+      process.exit(exitCode(res));
     }
   });
 
@@ -741,6 +1243,42 @@ program
         valueInputOption,
         dryRun: opts.dryRun,
       });
+      output(success(cmd, result, { spreadsheetId }));
+      process.exit(0);
+    } catch (err) {
+      const res = handleApiError(cmd, err, spreadsheetId);
+      output(res);
+      process.exit(exitCode(res));
+    }
+  });
+
+program
+  .command("batch-raw")
+  .description("Execute raw spreadsheets.batchUpdate requests (JSON array)")
+  .option("--spreadsheet <id>", "Spreadsheet ID or URL", DEFAULT_SPREADSHEET_ID)
+  .requiredOption("--requests <json>", "JSON array of batchUpdate requests")
+  .option("--dry-run", "Preview requests without applying")
+  .action(async (opts) => {
+    const cmd = "batch-raw";
+    const spreadsheetId = resolveSpreadsheet(cmd, opts.spreadsheet);
+    if (!spreadsheetId) {
+      return process.exit(10);
+    }
+    const client = await getSheets(cmd);
+    if (!client) {
+      return process.exit(20);
+    }
+    const parsed = parseJsonArray(cmd, "--requests", opts.requests);
+    if (!parsed) {
+      return process.exit(10);
+    }
+    try {
+      const result = await executeSpreadsheetRequests(
+        client,
+        spreadsheetId,
+        parsed as never,
+        Boolean(opts.dryRun)
+      );
       output(success(cmd, result, { spreadsheetId }));
       process.exit(0);
     } catch (err) {

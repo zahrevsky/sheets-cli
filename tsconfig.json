@@ -19,5 +19,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "strictNullChecks": true
-  }
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "SKILL.md"]
 }

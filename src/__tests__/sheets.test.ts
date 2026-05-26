@@ -1,4 +1,5 @@
-import { describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { defaultSheetResolver } from "../api/sheet-resolver";
 import { normalizeHeader } from "../sheets";
 
 const MULTIPLE_ROWS_REGEX = /Multiple rows/;
@@ -29,10 +30,18 @@ function createMockSheets(
           },
         })
       ),
+      batchUpdate: mock(() =>
+        Promise.resolve({
+          data: { replies: [] },
+        })
+      ),
       values: {
         get: mock(() =>
           Promise.resolve({
-            data: { values: overrides.getValues ?? [] },
+            data: {
+              values: overrides.getValues ?? [],
+              range: "Sheet1!A1:B1",
+            },
           })
         ),
         append: mock(() =>
@@ -62,6 +71,10 @@ function createMockSheets(
     },
   };
 }
+
+beforeEach(() => {
+  defaultSheetResolver.invalidate("spreadsheet-id");
+});
 
 describe("sheets", () => {
   describe("normalizeHeader", () => {
@@ -184,7 +197,9 @@ describe("sheets API functions", () => {
       mockSheets.spreadsheets.values.get = mock(() => {
         callCount += 1;
         if (callCount === 1) {
-          return Promise.resolve({ data: { values: [["Name", "Status"]] } });
+          return Promise.resolve({
+            data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+          });
         }
         return Promise.resolve({
           data: {
@@ -192,6 +207,7 @@ describe("sheets API functions", () => {
               ["Alice", "Active"],
               ["Bob", "Inactive"],
             ],
+            range: "Sheet1!A2:B3",
           },
         });
       });
@@ -230,6 +246,7 @@ describe("sheets API functions", () => {
               ["Bob", "Inactive"],
               ["Charlie", "Done"],
             ],
+            range: "Sheet1!A6:B8",
           },
         });
       });
@@ -255,10 +272,15 @@ describe("sheets API functions", () => {
       mockSheets.spreadsheets.values.get = mock(() => {
         callCount += 1;
         if (callCount === 1) {
-          return Promise.resolve({ data: { values: [["Name"]] } });
+          return Promise.resolve({
+            data: { values: [["Name"]], range: "Sheet1!A1:A1" },
+          });
         }
         return Promise.resolve({
-          data: { values: [["A"], ["B"], ["C"], ["D"]] },
+          data: {
+            values: [["A"], ["B"], ["C"], ["D"]],
+            range: "Sheet1!A1:A4",
+          },
         });
       });
 
@@ -308,7 +330,9 @@ describe("sheets API functions", () => {
       let _callCount = 0;
       mockSheets.spreadsheets.values.get = mock(() => {
         _callCount += 1;
-        return Promise.resolve({ data: { values: [["Name", "Status"]] } });
+        return Promise.resolve({
+          data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+        });
       });
 
       const result = await appendRows(
@@ -327,7 +351,9 @@ describe("sheets API functions", () => {
       const mockSheets = createMockSheets();
 
       mockSheets.spreadsheets.values.get = mock(() =>
-        Promise.resolve({ data: { values: [["Name", "Status"]] } })
+        Promise.resolve({
+          data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+        })
       );
 
       const result = await appendRows(
@@ -339,7 +365,7 @@ describe("sheets API functions", () => {
       );
 
       expect(result.dryRun).toBe(true);
-      expect(mockSheets.spreadsheets.values.append).not.toHaveBeenCalled();
+      expect(mockSheets.spreadsheets.batchUpdate).not.toHaveBeenCalled();
     });
 
     test("does not treat header names like ID/URL as column letters", async () => {
@@ -349,6 +375,7 @@ describe("sheets API functions", () => {
         Promise.resolve({
           data: {
             values: [["ID", "URL", "Status", "Company", "Position", "Source"]],
+            range: "Sheet1!A1:F1",
           },
         })
       );
@@ -370,15 +397,15 @@ describe("sheets API functions", () => {
 
       // Verify append was not called (dry-run), but check the row would
       // only span 6 columns (A-F), not 238 (A-ID)
-      const calls = mockSheets.spreadsheets.values.append.mock.calls;
-      expect(calls).toHaveLength(0); // dry-run skips API call
+      const calls = mockSheets.spreadsheets.batchUpdate.mock.calls;
+      expect(calls).toHaveLength(0);
 
-      // Run without dry-run to verify the actual row sent
       const mockSheets2 = createMockSheets();
       mockSheets2.spreadsheets.values.get = mock(() =>
         Promise.resolve({
           data: {
             values: [["ID", "URL", "Status", "Company", "Position", "Source"]],
+            range: "Sheet1!A1:F1",
           },
         })
       );
@@ -398,11 +425,26 @@ describe("sheets API functions", () => {
         {}
       );
 
-      const appendCalls = mockSheets2.spreadsheets.values.append.mock.calls;
-      expect(appendCalls).toHaveLength(1);
-      const body = appendCalls[0][0].requestBody;
-      expect(body.values[0]).toHaveLength(6);
-      expect(body.values[0]).toEqual([
+      const batchCalls = mockSheets2.spreadsheets.batchUpdate.mock
+        .calls as unknown[][];
+      expect(batchCalls).toHaveLength(1);
+      const firstCall = (
+        batchCalls[0] as unknown[] | undefined
+      )?.[0] as unknown as {
+        requestBody: {
+          requests: Array<{
+            appendCells?: { rows: Array<{ values: unknown[] }> };
+          }>;
+        };
+      };
+      const appendReq = firstCall.requestBody.requests[0]?.appendCells;
+      expect(appendReq?.rows[0]?.values).toHaveLength(6);
+      const cellValues = appendReq?.rows[0]?.values ?? [];
+      const strings = cellValues.map((c) => {
+        const cell = c as { userEnteredValue?: { stringValue?: string } };
+        return cell.userEnteredValue?.stringValue ?? "";
+      });
+      expect(strings).toEqual([
         "25",
         "https://example.com",
         "2do",
@@ -420,7 +462,9 @@ describe("sheets API functions", () => {
       const mockSheets = createMockSheets();
 
       mockSheets.spreadsheets.values.get = mock(() =>
-        Promise.resolve({ data: { values: [["Name", "Status"]] } })
+        Promise.resolve({
+          data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+        })
       );
 
       const result = await updateByRowIndex(
@@ -434,14 +478,16 @@ describe("sheets API functions", () => {
 
       expect(result.updatedCells).toBe(1);
       expect(result.dryRun).toBe(false);
-      expect(mockSheets.spreadsheets.values.batchUpdate).toHaveBeenCalled();
+      expect(mockSheets.spreadsheets.batchUpdate).toHaveBeenCalled();
     });
 
     test("treats ID header as header name not column letter", async () => {
       const mockSheets = createMockSheets();
 
       mockSheets.spreadsheets.values.get = mock(() =>
-        Promise.resolve({ data: { values: [["ID", "Status"]] } })
+        Promise.resolve({
+          data: { values: [["ID", "Status"]], range: "Sheet1!A1:B1" },
+        })
       );
 
       const result = await updateByRowIndex(
@@ -454,17 +500,29 @@ describe("sheets API functions", () => {
       );
 
       expect(result.updatedCells).toBe(1);
-      const calls = mockSheets.spreadsheets.values.batchUpdate.mock.calls;
-      const data = calls[0][0].requestBody.data;
-      // Should target column A (where ID header is), not column ID (238)
-      expect(data[0].range).toBe("'Sheet1'!A5");
+      const calls = mockSheets.spreadsheets.batchUpdate.mock
+        .calls as unknown[][];
+      const body = calls[0]?.[0] as unknown as {
+        requestBody: {
+          requests: Array<{
+            updateCells?: {
+              range?: { startColumnIndex?: number; startRowIndex?: number };
+            };
+          }>;
+        };
+      };
+      const grid = body.requestBody.requests[0]?.updateCells?.range;
+      expect(grid?.startColumnIndex).toBe(0);
+      expect(grid?.startRowIndex).toBe(4);
     });
 
     test("skips unknown columns", async () => {
       const mockSheets = createMockSheets();
 
       mockSheets.spreadsheets.values.get = mock(() =>
-        Promise.resolve({ data: { values: [["Name", "Status"]] } })
+        Promise.resolve({
+          data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+        })
       );
 
       const result = await updateByRowIndex(
@@ -491,11 +549,16 @@ describe("sheets API functions", () => {
         callCount += 1;
         if (callCount === 1) {
           // Headers
-          return Promise.resolve({ data: { values: [["Name", "Status"]] } });
+          return Promise.resolve({
+            data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+          });
         }
         // Key column values
         return Promise.resolve({
-          data: { values: [["Alice"], ["Bob"], ["Charlie"]] },
+          data: {
+            values: [["Alice"], ["Bob"], ["Charlie"]],
+            range: "Sheet1!A2:A4",
+          },
         });
       });
 
@@ -520,10 +583,12 @@ describe("sheets API functions", () => {
       mockSheets.spreadsheets.values.get = mock(() => {
         callCount += 1;
         if (callCount === 1) {
-          return Promise.resolve({ data: { values: [["Name", "Status"]] } });
+          return Promise.resolve({
+            data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+          });
         }
         return Promise.resolve({
-          data: { values: [["Alice"], ["Bob"]] },
+          data: { values: [["Alice"], ["Bob"]], range: "Sheet1!A2:A3" },
         });
       });
 
@@ -548,10 +613,12 @@ describe("sheets API functions", () => {
       mockSheets.spreadsheets.values.get = mock(() => {
         callCount += 1;
         if (callCount === 1) {
-          return Promise.resolve({ data: { values: [["Name", "Status"]] } });
+          return Promise.resolve({
+            data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+          });
         }
         return Promise.resolve({
-          data: { values: [["Alice"], ["Alice"]] },
+          data: { values: [["Alice"], ["Alice"]], range: "Sheet1!A2:A3" },
         });
       });
 
@@ -575,10 +642,12 @@ describe("sheets API functions", () => {
       mockSheets.spreadsheets.values.get = mock(() => {
         callCount += 1;
         if (callCount === 1) {
-          return Promise.resolve({ data: { values: [["Name", "Status"]] } });
+          return Promise.resolve({
+            data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+          });
         }
         return Promise.resolve({
-          data: { values: [["Alice"], ["Alice"]] },
+          data: { values: [["Alice"], ["Alice"]], range: "Sheet1!A2:A3" },
         });
       });
 
@@ -600,7 +669,9 @@ describe("sheets API functions", () => {
       const mockSheets = createMockSheets();
 
       mockSheets.spreadsheets.values.get = mock(() =>
-        Promise.resolve({ data: { values: [["Name", "Status"]] } })
+        Promise.resolve({
+          data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+        })
       );
 
       await expect(
@@ -654,7 +725,7 @@ describe("sheets API functions", () => {
 
       expect(result.dryRun).toBe(true);
       expect(result.updatedCells).toBe(4);
-      expect(mockSheets.spreadsheets.values.update).not.toHaveBeenCalled();
+      expect(mockSheets.spreadsheets.batchUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -665,7 +736,9 @@ describe("sheets API functions", () => {
       const mockSheets = createMockSheets();
 
       mockSheets.spreadsheets.values.get = mock(() =>
-        Promise.resolve({ data: { values: [["Name", "Status"]] } })
+        Promise.resolve({
+          data: { values: [["Name", "Status"]], range: "Sheet1!A1:B1" },
+        })
       );
 
       const result = await batchOperations(
@@ -686,7 +759,9 @@ describe("sheets API functions", () => {
       const mockSheets = createMockSheets();
 
       mockSheets.spreadsheets.values.get = mock(() =>
-        Promise.resolve({ data: { values: [["Name"]] } })
+        Promise.resolve({
+          data: { values: [["Name"]], range: "Sheet1!A1:A1" },
+        })
       );
 
       const result = await batchOperations(
@@ -697,7 +772,7 @@ describe("sheets API functions", () => {
       );
 
       expect(result.dryRun).toBe(true);
-      expect(mockSheets.spreadsheets.values.append).not.toHaveBeenCalled();
+      expect(mockSheets.spreadsheets.batchUpdate).not.toHaveBeenCalled();
     });
   });
 });
