@@ -17,6 +17,7 @@ See `docs/instructions.md` and `docs/agent-contract.md` in the repo for output s
 
 ```bash
 # Find spreadsheet by name
+sheets-cli sheets spreadsheets [--name "Projects"] [--limit 100]
 sheets-cli sheets find --name "Projects"
 
 # List sheets/tabs
@@ -62,6 +63,7 @@ sheets-cli auth logout
 
 ### Find Spreadsheet by Name
 ```bash
+sheets-cli sheets spreadsheets [--name "<query>"] [--limit 100] [--page-token <token>]
 sheets-cli sheets find --name "<query>" [--limit 10]
 ```
 Searches Google Drive for spreadsheets matching the name. Returns ID, name, URL.

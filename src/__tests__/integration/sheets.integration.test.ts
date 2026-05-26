@@ -54,4 +54,20 @@ describe.skipIf(!INTEGRATION)("sheets integration", () => {
       await drive.files.delete({ fileId: spreadsheetId });
     }
   });
+
+  test("lists spreadsheets via Drive API", async () => {
+    const { getAuthClient } = await import("../../auth");
+    const { listSpreadsheetsInDrive } = await import(
+      "../../sheets/drive-spreadsheets"
+    );
+
+    const auth = await getAuthClient();
+    if (!auth) {
+      throw new Error("Integration requires ~/.sheets-cli/token.json");
+    }
+
+    const result = await listSpreadsheetsInDrive(auth, { limit: 5 });
+    expect(Array.isArray(result.spreadsheets)).toBe(true);
+    expect(result.count).toBeGreaterThanOrEqual(0);
+  });
 });

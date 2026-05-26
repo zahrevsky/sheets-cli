@@ -286,8 +286,57 @@ sheets
   });
 
 sheets
+  .command("spreadsheets")
+  .description("List your Google Spreadsheets (Drive API)")
+  .option("--name <query>", "Filter by name (substring)")
+  .option("--limit <n>", "Max results per page (1–1000)", "100")
+  .option("--page-token <token>", "Drive API page token for next page")
+  .action(async (opts) => {
+    const cmd = "sheets spreadsheets";
+    const authClient = await getAuthClient();
+    if (!authClient) {
+      output(
+        error(
+          cmd,
+          "AUTH_ERROR",
+          "Not authenticated. Run 'sheets-cli auth login' first."
+        )
+      );
+      return process.exit(20);
+    }
+
+    const limit = parsePositiveIntOption(cmd, "--limit", opts.limit);
+    if (limit === null) {
+      return process.exit(10);
+    }
+
+    try {
+      const result = await listSpreadsheetsInDrive(authClient, {
+        nameQuery: opts.name,
+        limit,
+        pageToken: opts.pageToken,
+      });
+      output(
+        success(
+          cmd,
+          {
+            query: opts.name ?? null,
+            ...result,
+          },
+          {}
+        )
+      );
+      process.exit(0);
+    } catch (err) {
+      const result = handleApiError(cmd, err);
+      output(result);
+      process.exit(exitCode(result));
+    }
+  });
+
+sheets
   .command("find")
-  .description("Search for spreadsheets by name (uses Drive API)")
+  .description("Search spreadsheets by name (alias; use sheets spreadsheets)")
   .requiredOption("--name <query>", "Name to search for")
   .option("--limit <n>", "Max results", "10")
   .action(async (opts) => {
@@ -304,29 +353,22 @@ sheets
       return process.exit(20);
     }
 
+    const limit = parsePositiveIntOption(cmd, "--limit", opts.limit);
+    if (limit === null) {
+      return process.exit(10);
+    }
+
     try {
-      const { google } = await import("googleapis");
-      const drive = google.drive({ version: "v3", auth: authClient });
-      const limit = Number.parseInt(opts.limit, 10);
-
-      const res = await drive.files.list({
-        q: `mimeType='application/vnd.google-apps.spreadsheet' and name contains '${opts.name.replace(/'/g, "\\'")}'`,
-        fields: "files(id, name, webViewLink, modifiedTime)",
-        pageSize: limit,
-        orderBy: "modifiedTime desc",
+      const result = await listSpreadsheetsInDrive(authClient, {
+        nameQuery: opts.name,
+        limit,
       });
-
-      const files = res.data.files ?? [];
       output(
         success(cmd, {
           query: opts.name,
-          count: files.length,
-          spreadsheets: files.map((f) => ({
-            id: f.id,
-            name: f.name,
-            url: f.webViewLink,
-            modified: f.modifiedTime,
-          })),
+          count: result.count,
+          spreadsheets: result.spreadsheets,
+          nextPageToken: result.nextPageToken,
         })
       );
       process.exit(0);
