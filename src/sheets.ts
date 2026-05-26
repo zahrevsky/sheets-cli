@@ -1,6 +1,12 @@
 import type { OAuth2Client } from "google-auth-library";
 import type { sheets_v4 } from "googleapis";
 import { google } from "googleapis";
+import { defaultSheetResolver } from "./api/sheet-resolver";
+import {
+  appendRowViaBatch,
+  writeCellsViaBatch,
+  writeRangeViaBatch,
+} from "./sheets/batch-write";
 import type { BatchOperation, ValueInputOption } from "./types";
 
 const COLUMN_LETTER_REGEX = /^[A-Za-z]{1,3}$/;
@@ -441,18 +447,27 @@ export async function appendRows(
       };
     }
 
-    const res = await sheets.spreadsheets.values.append({
+    const sheetRef = await defaultSheetResolver.resolveByTitle(
+      sheets,
       spreadsheetId,
-      range: `${quotedSheet}!A1`,
-      valueInputOption: opts.valueInputOption ?? "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [headers, row] },
-    });
+      sheetName
+    );
+    const valueInputOption = opts.valueInputOption ?? "USER_ENTERED";
+    if (!opts.dryRun) {
+      await writeRangeViaBatch(
+        sheets,
+        spreadsheetId,
+        `${quotedSheet}!A1:${colToLetter(width)}2`,
+        [headers, row],
+        { valueInputOption, dryRun: false }
+      );
+      defaultSheetResolver.invalidate(spreadsheetId);
+    }
 
     return {
-      updatedRange: res.data.updates?.updatedRange ?? "",
-      updatedRows: res.data.updates?.updatedRows ?? 0,
-      dryRun: false,
+      updatedRange: `${quotedSheet}!A1`,
+      updatedRows: 2,
+      dryRun: opts.dryRun ?? false,
     };
   }
 
@@ -501,19 +516,24 @@ export async function appendRows(
     };
   }
 
-  const res = await sheets.spreadsheets.values.append({
+  const sheetRef = await defaultSheetResolver.resolveByTitle(
+    sheets,
     spreadsheetId,
-    range: `${quotedSheet}!${colToLetter(layout.startCol)}${
-      layout.hasHeader ? layout.headerRow : layout.dataStartRow
-    }`,
+    sheetName
+  );
+  if (!sheetRef) {
+    throw new Error(`Sheet "${sheetName}" not found`);
+  }
+  await appendRowViaBatch(sheets, spreadsheetId, sheetRef.sheetId, row, {
     valueInputOption: opts.valueInputOption ?? "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [row] },
+    dryRun: false,
   });
 
   return {
-    updatedRange: res.data.updates?.updatedRange ?? "",
-    updatedRows: res.data.updates?.updatedRows ?? 0,
+    updatedRange: `${quotedSheet}!${colToLetter(layout.startCol)}${
+      layout.hasHeader ? layout.headerRow : layout.dataStartRow
+    }`,
+    updatedRows: 1,
     dryRun: false,
   };
 }
@@ -542,7 +562,18 @@ export async function updateByRowIndex(
     opts.headerRow
   );
 
-  const updates: { range: string; values: unknown[][] }[] = [];
+  const sheetRef = await defaultSheetResolver.resolveByTitle(
+    sheets,
+    spreadsheetId,
+    sheetName
+  );
+  if (!sheetRef) {
+    throw new Error(`Sheet "${sheetName}" not found`);
+  }
+
+  const cellUpdates: { rowIndex: number; colIndex: number; value: unknown }[] =
+    [];
+  const rangeParts: string[] = [];
 
   for (const [key, val] of Object.entries(setValues)) {
     let colNum: number | null = null;
@@ -562,33 +593,37 @@ export async function updateByRowIndex(
       continue;
     }
 
-    const range = `${quotedSheet}!${colToLetter(colNum)}${rowIndex}`;
-    updates.push({ range, values: [[val]] });
+    rangeParts.push(`${quotedSheet}!${colToLetter(colNum)}${rowIndex}`);
+    cellUpdates.push({
+      rowIndex: rowIndex - 1,
+      colIndex: colNum - 1,
+      value: val,
+    });
   }
 
   if (opts.dryRun) {
     return {
-      updatedCells: updates.length,
-      updatedRange: updates.map((u) => u.range).join(", "),
+      updatedCells: cellUpdates.length,
+      updatedRange: rangeParts.join(", "),
       dryRun: true,
     };
   }
 
-  if (updates.length === 0) {
+  if (cellUpdates.length === 0) {
     return { updatedCells: 0, updatedRange: "", dryRun: false };
   }
 
-  await sheets.spreadsheets.values.batchUpdate({
+  await writeCellsViaBatch(
+    sheets,
     spreadsheetId,
-    requestBody: {
-      valueInputOption: opts.valueInputOption ?? "USER_ENTERED",
-      data: updates,
-    },
-  });
+    sheetRef.sheetId,
+    cellUpdates,
+    { valueInputOption: opts.valueInputOption ?? "USER_ENTERED", dryRun: false }
+  );
 
   return {
-    updatedCells: updates.length,
-    updatedRange: updates.map((u) => u.range).join(", "),
+    updatedCells: cellUpdates.length,
+    updatedRange: rangeParts.join(", "),
     dryRun: false,
   };
 }
@@ -671,7 +706,18 @@ export async function updateByKey(
     );
   }
 
-  const updates: { range: string; values: unknown[][] }[] = [];
+  const sheetRef = await defaultSheetResolver.resolveByTitle(
+    sheets,
+    spreadsheetId,
+    sheetName
+  );
+  if (!sheetRef) {
+    throw new Error(`Sheet "${sheetName}" not found`);
+  }
+
+  const cellUpdates: { rowIndex: number; colIndex: number; value: unknown }[] =
+    [];
+  const updatedRanges: string[] = [];
 
   for (const rowNum of matchingRows) {
     for (const [key, val] of Object.entries(setValues)) {
@@ -692,21 +738,25 @@ export async function updateByKey(
         continue;
       }
 
-      const range = `${quotedSheet}!${colToLetter(colNum)}${rowNum}`;
-      updates.push({ range, values: [[val]] });
+      updatedRanges.push(`${quotedSheet}!${colToLetter(colNum)}${rowNum}`);
+      cellUpdates.push({
+        rowIndex: rowNum - 1,
+        colIndex: colNum - 1,
+        value: val,
+      });
     }
   }
 
   if (opts.dryRun) {
     return {
       matchedRows: matchingRows.length,
-      updatedCells: updates.length,
-      updatedRanges: updates.map((u) => u.range),
+      updatedCells: cellUpdates.length,
+      updatedRanges,
       dryRun: true,
     };
   }
 
-  if (updates.length === 0) {
+  if (cellUpdates.length === 0) {
     return {
       matchedRows: matchingRows.length,
       updatedCells: 0,
@@ -715,18 +765,18 @@ export async function updateByKey(
     };
   }
 
-  await sheets.spreadsheets.values.batchUpdate({
+  await writeCellsViaBatch(
+    sheets,
     spreadsheetId,
-    requestBody: {
-      valueInputOption: opts.valueInputOption ?? "USER_ENTERED",
-      data: updates,
-    },
-  });
+    sheetRef.sheetId,
+    cellUpdates,
+    { valueInputOption: opts.valueInputOption ?? "USER_ENTERED", dryRun: false }
+  );
 
   return {
     matchedRows: matchingRows.length,
-    updatedCells: updates.length,
-    updatedRanges: updates.map((u) => u.range),
+    updatedCells: cellUpdates.length,
+    updatedRanges,
     dryRun: false,
   };
 }
@@ -746,16 +796,14 @@ export async function setRange(
     };
   }
 
-  const res = await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range,
+  const write = await writeRangeViaBatch(sheets, spreadsheetId, range, values, {
     valueInputOption: opts.valueInputOption ?? "USER_ENTERED",
-    requestBody: { values },
+    dryRun: false,
   });
 
   return {
-    updatedRange: res.data.updatedRange ?? range,
-    updatedCells: res.data.updatedCells ?? 0,
+    updatedRange: range,
+    updatedCells: write.updatedCells,
     dryRun: false,
   };
 }

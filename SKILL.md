@@ -7,7 +7,11 @@ description: Read, write, and update Google Sheets data via CLI. Use when the us
 
 CLI for Google Sheets primitives. Read tables, append rows, update cells by key or index, batch operations.
 
+**Agents:** use shell commands and parse **JSON from stdout**. This tool is **not** an MCP server; do not look for MCP tools for Sheets—use `sheets-cli` directly.
+
 > **Installation:** `sheets-cli` is already installed and available in the user's PATH. Run commands directly—no installation needed.
+
+See `docs/instructions.md` and `docs/agent-contract.md` in the repo for output shape and workflows.
 
 ## Quick Reference
 
@@ -136,6 +140,29 @@ sheets-cli batch --spreadsheet <id> --ops '<json-array>' [--dry-run]
 ```
 Operations: `append`, `updateRow`, `updateKey`, `setRange`.
 
+### Raw batchUpdate (any API request type)
+```bash
+sheets-cli batch-raw --spreadsheet <id> --requests '<json-array>' [--dry-run]
+```
+
+### Sheet structure
+```bash
+sheets-cli sheet add --spreadsheet <id> --title "NewTab" [--dry-run]
+sheets-cli sheet delete --spreadsheet <id> --sheet "Tab" [--dry-run]
+sheets-cli sheet hide --spreadsheet <id> --sheet "Tab" [--dry-run]
+sheets-cli sheet show --spreadsheet <id> --sheet "Tab" [--dry-run]
+sheets-cli sheet duplicate --spreadsheet <id> --sheet "Tab" [--new-name "Copy"] [--dry-run]
+```
+
+### Formatting
+```bash
+sheets-cli format conditional-add --spreadsheet <id> --sheet "Tab" --rule '<json>' [--dry-run]
+sheets-cli format conditional-delete --spreadsheet <id> --sheet "Tab" --index 0 [--dry-run]
+sheets-cli merge --spreadsheet <id> --range "Tab!A1:B2" [--dry-run]
+sheets-cli unmerge --spreadsheet <id> --range "Tab!A1:B2" [--dry-run]
+sheets-cli find-replace --spreadsheet <id> --sheet "Tab" --find "x" --replacement "y" [--dry-run]
+```
+
 ## Global Options
 
 | Option | Description |
@@ -182,6 +209,14 @@ Errors:
 11. **Column letter vs header:** When a key like `ID` or `URL` matches both a header name and a column letter pattern, the header match wins. Column letter addressing (`A`, `B`, `AA`) is only used as fallback when no header matches
 10. **Empty sheets:** `append` can bootstrap by writing a header row from JSON keys
 11. **`read table --range`** accepts `A1:Z` (auto-prefixed with the sheet)
+
+## Install skill
+
+```bash
+sheets-cli install-skill           # project .claude/skills/
+sheets-cli install-skill --global  # ~/.claude/skills/
+sheets-cli install-skill --codex   # ~/.codex/skills/
+```
 
 ## Exit Codes
 

@@ -24,18 +24,11 @@
   <img src="https://img.shields.io/badge/bun-%23000000.svg?style=flat&logo=bun&logoColor=white" alt="Bun">
   <img src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=flat&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Google%20Sheets-34A853?style=flat&logo=google-sheets&logoColor=white" alt="Google Sheets">
-  <br>
-  <img src="https://img.shields.io/badge/Claude_Code-D97757?style=flat&logo=anthropic&logoColor=white" alt="Claude Code">
-  <img src="https://img.shields.io/badge/OpenAI_Codex-412991?style=flat&logo=openai&logoColor=white" alt="OpenAI Codex">
 </p>
 
 ---
 
-> **📢 New Project:** Check out [**GNO**](https://gno.sh) — local hybrid search for your documents (Markdown, PDF, Word, Excel). Combines BM25 + vector search with MCP integration for AI agents. Great companion to sheets-cli: search your local docs, query your cloud sheets.
-
----
-
-Fast, deterministic CLI for Google Sheets. Read tables, append rows, update cells by key or index, batch operations—all with JSON output for programmatic consumption.
+Fast, deterministic CLI for Google Sheets. Read tables, append rows, update cells by key or index, batch operations, and spreadsheet structure/formatting via `spreadsheets.batchUpdate`—all with **JSON stdout** for agents (shell only, **not** an MCP server).
 
 ```bash
 # Read a sheet as structured data
@@ -56,7 +49,7 @@ sheets-cli update key --sheet "Projects" --key-col "Name" --key "Acme" --set '{"
 **Prerequisites:** [Bun](https://bun.sh) runtime
 
 ```bash
-git clone https://github.com/gmickel/sheets-cli.git
+git clone https://github.com/zahrevsky/sheets-cli.git
 cd sheets-cli
 bun install
 bun run build
@@ -251,6 +244,8 @@ All commands return JSON to stdout:
 
 ## For Agents
 
+**Console + JSON only.** Agents should run `sheets-cli` in the shell and parse stdout. We do not ship an MCP server. See [docs/agent-contract.md](docs/agent-contract.md) and [docs/instructions.md](docs/instructions.md).
+
 ### Install Skill
 
 ```bash
@@ -310,11 +305,19 @@ bun run lint         # Lint
 bun run test         # Tests
 ```
 
+See [docs/testing.md](docs/testing.md) for regression and optional integration tests.
+
+<br>
+
+## Acknowledgements
+
+Fork of [gmickel/sheets-cli](https://github.com/gmickel/sheets-cli). This repository adds `spreadsheets.batchUpdate` coverage, agent-focused docs, and expanded CLI commands.
+
 <br>
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 ---
 
