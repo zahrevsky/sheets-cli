@@ -41,6 +41,18 @@ When repository secrets are configured, CI runs integration tests:
 
 Without these secrets, CI still runs unit tests, typecheck, and Ultracite on every push/PR.
 
+## API coupling (googleapis)
+
+After bumping `googleapis`:
+
+```bash
+bun run generate:request-kinds
+bun test src/__tests__/api/googleapis-sync.test.ts
+bun run typecheck
+```
+
+Local check: `sheets-cli doctor api`. See [api-coupling.md](./api-coupling.md).
+
 ## Parity (phase B only)
 
 `src/__tests__/parity/` exists only during Values→batchUpdate migration and is removed after phase B.

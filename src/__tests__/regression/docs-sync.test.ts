@@ -29,6 +29,7 @@ const TOP_LEVEL_COMMANDS = [
   "paste",
   "autoresize",
   "borders",
+  "doctor",
   "install-skill",
 ];
 
