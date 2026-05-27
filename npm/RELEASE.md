@@ -2,6 +2,13 @@
 
 Publishes `@zahrevsky/sheets-cli` and platform binary packages to the npm registry.
 
+## Versioning
+
+- **Source of truth:** `npm/cli/package.json` (`version` field).
+- Run `bun scripts/sync-npm-versions.ts` to copy that version to root `package.json`, all platform packages, and `optionalDependencies`.
+- CLI `--version` reads root `package.json` at build time (keep root in sync before `bun run build:npm`).
+- This fork uses an independent semver line from [gmickel/sheets-cli](https://github.com/gmickel/sheets-cli); upstream was at `1.0.2` when npm distribution was added (`1.0.3` = first publishable release).
+
 ## Secrets (GitHub Actions)
 
 | Secret | Purpose |

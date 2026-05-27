@@ -55,6 +55,16 @@ describe("CLI", () => {
       expect(exitCode).toBe(0);
       expect(stdout).toMatch(VERSION_REGEX);
     });
+
+    test("matches package.json version", async () => {
+      const pkg = await Bun.file(
+        new URL("../../package.json", import.meta.url)
+      ).json();
+      const { stdout, exitCode } = await runCli(["--version"]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout.trim()).toBe(pkg.version);
+    });
   });
 
   describe("auth commands", () => {
