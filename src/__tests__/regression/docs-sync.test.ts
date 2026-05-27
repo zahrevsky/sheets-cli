@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { SKILL_CONTENT } from "../../skill";
 
 const ROOT = join(import.meta.dir, "../../..");
+const SKILL_PATH = join(ROOT, "skills/sheets-cli/SKILL.md");
 
 const TOP_LEVEL_COMMANDS = [
   "auth",
@@ -30,23 +30,27 @@ const TOP_LEVEL_COMMANDS = [
   "autoresize",
   "borders",
   "doctor",
-  "install-skill",
 ];
 
 function readRootFile(name: string): string {
   return readFileSync(join(ROOT, name), "utf8");
 }
 
+function readSkillMarkdown(): string {
+  return readFileSync(SKILL_PATH, "utf8");
+}
+
 describe("docs sync", () => {
-  test("SKILL_CONTENT matches SKILL.md", () => {
-    const markdown = readRootFile("SKILL.md");
+  test("skills/sheets-cli/SKILL.md exists", () => {
+    const markdown = readSkillMarkdown();
     const normalize = (s: string) => s.replaceAll("\r\n", "\n").trimEnd();
-    expect(normalize(SKILL_CONTENT)).toBe(normalize(markdown));
+    expect(normalize(markdown).length).toBeGreaterThan(100);
   });
 
   test("SKILL.md documents top-level commands", () => {
+    const skillContent = readSkillMarkdown();
     for (const cmd of TOP_LEVEL_COMMANDS) {
-      expect(SKILL_CONTENT).toContain(`sheets-cli ${cmd}`);
+      expect(skillContent).toContain(`sheets-cli ${cmd}`);
     }
   });
 
@@ -64,7 +68,13 @@ describe("docs sync", () => {
   });
 
   test("SKILL.md mentions JSON stdout contract", () => {
-    expect(SKILL_CONTENT.toLowerCase()).toContain("json");
-    expect(SKILL_CONTENT.toLowerCase()).toContain("stdout");
+    const skillContent = readSkillMarkdown();
+    expect(skillContent.toLowerCase()).toContain("json");
+    expect(skillContent.toLowerCase()).toContain("stdout");
+  });
+
+  test("README documents npx skills installation", () => {
+    const readme = readRootFile("README.md");
+    expect(readme).toContain("npx skills");
   });
 });

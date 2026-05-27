@@ -36,7 +36,6 @@ import {
   updateByRowIndex,
 } from "./sheets";
 import { executeSpreadsheetRequests } from "./sheets/execute-requests";
-import { SKILL_CONTENT } from "./skill";
 import type { BatchOperation, Result, ValueInputOption } from "./types";
 import { DEFAULT_SPREADSHEET_ID, parseSpreadsheetId } from "./types";
 
@@ -1254,51 +1253,6 @@ program
       const res = handleApiError(cmd, err, spreadsheetId);
       output(res);
       process.exit(exitCode(res));
-    }
-  });
-
-// Install skill command
-program
-  .command("install-skill")
-  .description("Install Agent Skill for Claude Code or OpenAI Codex")
-  .option("--global", "Claude Code: ~/.claude/skills/ (personal)")
-  .option("--codex", "OpenAI Codex: ~/.codex/skills/")
-  .action(async (opts) => {
-    const cmd = "install-skill";
-
-    try {
-      let baseDir: string;
-      let platform: string;
-
-      if (opts.codex) {
-        baseDir = `${process.env.HOME}/.codex/skills`;
-        platform = "Codex";
-      } else if (opts.global) {
-        baseDir = `${process.env.HOME}/.claude/skills`;
-        platform = "Claude Code (global)";
-      } else {
-        baseDir = "./.claude/skills";
-        platform = "Claude Code (project)";
-      }
-
-      const skillDir = `${baseDir}/sheets-cli`;
-      await Bun.$`mkdir -p ${skillDir}`.quiet();
-      const targetPath = `${skillDir}/SKILL.md`;
-      await Bun.write(targetPath, SKILL_CONTENT);
-
-      output(
-        success(cmd, {
-          installed: true,
-          path: targetPath,
-          platform,
-          message: `Skill installed to ${targetPath}`,
-        })
-      );
-      process.exit(0);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      output(error(cmd, "API_ERROR", `Failed to install skill: ${msg}`));
-      process.exit(40);
     }
   });
 
