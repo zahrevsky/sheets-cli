@@ -1,6 +1,6 @@
 {
   "name": "@zahrevsky/sheets-cli-win32-arm64",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Native sheets-cli binary (win32-arm64)",
   "license": "MIT",
   "author": "zahrevsky",
