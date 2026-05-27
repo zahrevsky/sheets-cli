@@ -1,6 +1,6 @@
 {
   "name": "@zahrevsky/sheets-cli-darwin-arm64",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Native sheets-cli binary (darwin-arm64)",
   "license": "MIT",
   "author": "zahrevsky",
@@ -15,6 +15,9 @@
   "cpu": [
     "arm64"
   ],
+  "bin": {
+    "sheets-cli": "bin/sheets-cli"
+  },
   "files": [
     "bin"
   ],
