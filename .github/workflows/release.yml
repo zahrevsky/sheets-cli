@@ -66,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
           publish_if_missing() {
-            local dir="$1"
+            local dir="${1%/}/"
             local name version
             name=$(node -p "require('./${dir}package.json').name")
             version=$(node -p "require('./${dir}package.json').version")
