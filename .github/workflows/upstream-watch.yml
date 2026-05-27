@@ -1,124 +1,40 @@
 name: Upstream watch
 
-# Detects new commits on the upstream repository and POSTs to a Cursor webhook.
+# Triggers a Cursor automation webhook on schedule (prompt is configured in Cursor).
 on:
   schedule:
     - cron: "30 7 * * *"
   workflow_dispatch:
-    inputs:
-      force_webhook:
-        description: POST webhook even if upstream HEAD was already recorded
-        type: boolean
-        default: false
 
 concurrency:
   group: upstream-watch
   cancel-in-progress: false
 
 env:
-  UPSTREAM_FETCH_REF: upstream/main
-  UPSTREAM_BRANCH: main
+  # Edit this line to point at the upstream repository (owner/name).
+  UPSTREAM_REPO: gmickel/sheets-cli
 
 jobs:
-  check-upstream:
+  trigger-cursor:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: oven-sh/setup-bun@v2
-
-      - run: bun install
-
-      - name: Resolve upstream repository
-        id: meta
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: |
-          RESOLVED=$(bun scripts/check-upstream-sync.ts resolve)
-          echo "$RESOLVED" | tee upstream-resolve.json
-          REPO=$(echo "$RESOLVED" | bun -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).repository)")
-          SOURCE=$(echo "$RESOLVED" | bun -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).source)")
-          echo "repository=$REPO" >> "$GITHUB_OUTPUT"
-          echo "source=$SOURCE" >> "$GITHUB_OUTPUT"
-          echo "Resolved upstream \`$REPO\` (source: $SOURCE)" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Fetch upstream branch
-        run: |
-          git fetch --quiet "https://github.com/${{ steps.meta.outputs.repository }}.git" \
-            "${{ env.UPSTREAM_BRANCH }}:refs/remotes/upstream/${{ env.UPSTREAM_BRANCH }}"
-          echo "UPSTREAM_HEAD=$(git rev-parse refs/remotes/upstream/${{ env.UPSTREAM_BRANCH }})" >> "$GITHUB_ENV"
-
-      - name: Evaluate upstream delta
-        id: upstream
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          UPSTREAM_HEAD: ${{ env.UPSTREAM_HEAD }}
-        run: |
-          RESULT=$(bun scripts/check-upstream-sync.ts check)
-          echo "$RESULT" | tee upstream-result.json
-          STATUS=$(echo "$RESULT" | bun -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).status)")
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-
-      - name: Bootstrap upstream pointer (first run)
-        if: steps.upstream.outputs.status == 'bootstrap'
-        run: bun scripts/check-upstream-sync.ts bootstrap
-
-      - name: Commit bootstrap pointer
-        if: steps.upstream.outputs.status == 'bootstrap'
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: bootstrap upstream last-seen SHA"
-          file_pattern: .github/upstream-last-seen.sha
-          skip_dirty_check: true
-
-      - name: Trigger Cursor upstream webhook
-        if: >-
-          steps.upstream.outputs.status == 'updates' ||
-          (github.event_name == 'workflow_dispatch' && inputs.force_webhook == true)
+      - name: Trigger Cursor webhook
         env:
           CURSOR_UPSTREAM_WEBHOOK_URL: ${{ secrets.CURSOR_UPSTREAM_WEBHOOK_URL }}
           CURSOR_UPSTREAM_WEBHOOK_BEARER: ${{ secrets.CURSOR_UPSTREAM_WEBHOOK_BEARER }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           if [ -z "$CURSOR_UPSTREAM_WEBHOOK_URL" ]; then
-            echo "::warning::CURSOR_UPSTREAM_WEBHOOK_URL is not set; skipping webhook."
+            echo "::warning::CURSOR_UPSTREAM_WEBHOOK_URL is not set; skipping."
             exit 0
           fi
-          if [ "${{ steps.upstream.outputs.status }}" != "updates" ]; then
-            echo "force_webhook is set but status is not updates; nothing to send."
-            exit 0
-          fi
-          bun scripts/check-upstream-sync.ts webhook-payload upstream-result.json > webhook-payload.json
-          HTTP_CODE=$(curl --silent --show-error --output /tmp/webhook-response.txt --write-out "%{http_code}" \
+          HTTP_CODE=$(curl --silent --show-error --output /tmp/cursor-webhook-response.txt --write-out "%{http_code}" \
             --request POST \
             --url "$CURSOR_UPSTREAM_WEBHOOK_URL" \
-            --header "Content-Type: application/json" \
-            --header "Authorization: Bearer ${CURSOR_UPSTREAM_WEBHOOK_BEARER}" \
-            --data @webhook-payload.json)
+            --header "Authorization: Bearer ${CURSOR_UPSTREAM_WEBHOOK_BEARER}")
+          echo "Upstream repo (reference): ${{ env.UPSTREAM_REPO }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Webhook HTTP ${HTTP_CODE}" >> "$GITHUB_STEP_SUMMARY"
-          if [ -f /tmp/webhook-response.txt ]; then
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            head -c 4000 /tmp/webhook-response.txt >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          fi
           if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-            echo "::warning::Upstream webhook returned HTTP ${HTTP_CODE}"
+            echo "::warning::Webhook returned HTTP ${HTTP_CODE}"
+            [ -f /tmp/cursor-webhook-response.txt ] && cat /tmp/cursor-webhook-response.txt
             exit 0
           fi
-
-      - name: Record upstream HEAD
-        if: steps.upstream.outputs.status == 'updates'
-        run: bun scripts/check-upstream-sync.ts write-last-seen
-
-      - name: Commit upstream pointer
-        if: steps.upstream.outputs.status == 'updates'
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: record upstream HEAD after webhook"
-          file_pattern: .github/upstream-last-seen.sha
-          skip_dirty_check: true
