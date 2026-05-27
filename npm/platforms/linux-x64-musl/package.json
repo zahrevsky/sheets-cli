@@ -1,6 +1,6 @@
 {
   "name": "@zahrevsky/sheets-cli-linux-x64-musl",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "description": "Native sheets-cli binary (linux-x64-musl)",
   "license": "MIT",
   "author": "zahrevsky",

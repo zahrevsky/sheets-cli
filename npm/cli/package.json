@@ -1,6 +1,6 @@
 {
   "name": "@zahrevsky/sheets-cli",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "description": "Composable Google Sheets CLI for humans and agents",
   "license": "MIT",
   "author": "zahrevsky",
@@ -28,13 +28,13 @@
     "README.md"
   ],
   "optionalDependencies": {
-    "@zahrevsky/sheets-cli-darwin-arm64": "1.0.3",
-    "@zahrevsky/sheets-cli-darwin-x64": "1.0.3",
-    "@zahrevsky/sheets-cli-linux-arm64": "1.0.3",
-    "@zahrevsky/sheets-cli-linux-arm64-musl": "1.0.3",
-    "@zahrevsky/sheets-cli-linux-x64": "1.0.3",
-    "@zahrevsky/sheets-cli-linux-x64-musl": "1.0.3",
-    "@zahrevsky/sheets-cli-win32-arm64": "1.0.3",
-    "@zahrevsky/sheets-cli-win32-x64": "1.0.3"
+    "@zahrevsky/sheets-cli-darwin-arm64": "1.0.0",
+    "@zahrevsky/sheets-cli-darwin-x64": "1.0.0",
+    "@zahrevsky/sheets-cli-linux-arm64": "1.0.0",
+    "@zahrevsky/sheets-cli-linux-arm64-musl": "1.0.0",
+    "@zahrevsky/sheets-cli-linux-x64": "1.0.0",
+    "@zahrevsky/sheets-cli-linux-x64-musl": "1.0.0",
+    "@zahrevsky/sheets-cli-win32-arm64": "1.0.0",
+    "@zahrevsky/sheets-cli-win32-x64": "1.0.0"
   }
 }
