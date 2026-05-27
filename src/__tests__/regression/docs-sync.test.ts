@@ -63,6 +63,16 @@ describe("docs sync", () => {
     expect(pkg.repository?.url).toContain("zahrevsky/sheets-cli");
   });
 
+  test("npm/cli version matches root package.json", () => {
+    const root = JSON.parse(readRootFile("package.json")) as {
+      version: string;
+    };
+    const cli = JSON.parse(readRootFile("npm/cli/package.json")) as {
+      version: string;
+    };
+    expect(cli.version).toBe(root.version);
+  });
+
   test("SKILL.md mentions JSON stdout contract", () => {
     expect(SKILL_CONTENT.toLowerCase()).toContain("json");
     expect(SKILL_CONTENT.toLowerCase()).toContain("stdout");
