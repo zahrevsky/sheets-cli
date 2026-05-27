@@ -27,12 +27,13 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
-    if: ${{ secrets.SHEETS_CLI_INTEGRATION == '1' }}
+    if: ${{ github.actor != 'dependabot[bot]' }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install
       - name: Integration tests (live Google API)
+        if: ${{ secrets.SHEETS_CLI_INTEGRATION == '1' }}
         env:
           SHEETS_CLI_INTEGRATION: "1"
           SHEETS_CLI_CREDENTIALS_JSON: ${{ secrets.SHEETS_CLI_CREDENTIALS_JSON }}
