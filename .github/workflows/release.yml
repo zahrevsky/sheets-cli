@@ -72,4 +72,4 @@ jobs:
 
       - name: Publish @zahrevsky/sheets-cli
         working-directory: npm
-        run: npm publish cli --access public
+        run: npm publish ./cli --access public
