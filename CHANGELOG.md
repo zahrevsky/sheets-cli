@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CHANGELOG.md` and a release-process note to update it when bumping versions.
 - Dependabot (daily, including major) for Bun and GitHub Actions dependencies.
 - Scheduled `upstream-watch`: POST Cursor webhook (Bearer only); `UPSTREAM_REPO` in workflow env; `scripts/sync-upstream-sha.ts` for agent-driven SHA updates.
-- [docs/automation.md](docs/automation.md) describing setup.
+- Automation docs in README; upstream baseline SHA at fork import in `.github/upstream-last-seen.sha`.
 
 ## [1.0.3] - 2026-05-27
 
