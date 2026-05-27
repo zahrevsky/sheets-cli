@@ -349,6 +349,29 @@ bun x ultracite check
 SHEETS_CLI_INTEGRATION=1 bun test src/__tests__/integration
 ```
 
+### CI secrets (Actions + Dependabot)
+
+Integration job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) always runs live Google API tests. It needs:
+
+| Secret | Purpose |
+| --- | --- |
+| `SHEETS_CLI_CREDENTIALS_JSON` | OAuth client JSON |
+| `SHEETS_CLI_TOKEN_JSON` | OAuth token JSON (with `refresh_token`) |
+
+Add both under **Settings → Secrets and variables → Actions**.
+
+**Dependabot PRs:** GitHub does **not** expose Actions secrets to workflows triggered by `dependabot[bot]` (same security model as fork PRs — malicious deps could exfiltrate secrets). PR branches live in your repo, but the *actor* is still Dependabot. Duplicate the **same two secret names and values** under **Settings → Secrets and variables → Dependabot**. The workflow uses identical `${{ secrets.NAME }}` syntax; only the secret store differs. See [Troubleshooting Dependabot on GitHub Actions](https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions).
+
+`SHEETS_CLI_INTEGRATION=1` is set in the workflow (`env` at workflow level), not a repository secret.
+
+### Workflow validation (local)
+
+```bash
+bun run workflow:lint   # installs actionlint + act into .bin/, then validates
+```
+
+Uses [actionlint](https://github.com/rhysd/actionlint) and [act](https://github.com/nektos/act) (`act -l` and a dry-run of the `test` job). Full `act` runs need Docker and optional `-s` secrets.
+
 ### Automation
 
 **Dependabot** ([`.github/dependabot.yml`](.github/dependabot.yml)) runs daily for Bun (patch, minor, and major) and weekly for GitHub Actions. It opens pull requests for review; nothing auto-merges.

@@ -137,4 +137,6 @@ Most formatting and common issues are automatically fixed by Biome. Run `bun x u
 - `SHEETS_CLI_CREDENTIALS_JSON` → `~/.sheets-cli/credentials.json` (OAuth client_id/secret)
 - Optionally set `SHEETS_CLI_DEFAULT_SPREADSHEET_ID` to avoid passing `--spreadsheet` every time.
 
+CI integration tests use the same JSON via GitHub Actions secrets; for Dependabot PRs duplicate them as **Dependabot secrets** (same names). Validate workflows locally with `bun run workflow:lint` (actionlint + act).
+
 After secrets are provisioned, `bun ./src/cli.ts auth status` should return `"authenticated": true`.
