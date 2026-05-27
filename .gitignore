@@ -6,6 +6,10 @@ out
 dist
 *.tgz
 
+# npm release binaries (built in CI)
+npm/platforms/*/bin/*
+!npm/platforms/*/bin/.gitkeep
+
 # code coverage
 coverage
 *.lcov

@@ -1,0 +1,24 @@
+{
+  "name": "@zahrevsky/sheets-cli-linux-arm64",
+  "version": "1.0.3",
+  "description": "Native sheets-cli binary (linux-arm64)",
+  "license": "MIT",
+  "author": "zahrevsky",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zahrevsky/sheets-cli.git",
+    "directory": "npm/platforms/linux-arm64"
+  },
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -46,26 +46,50 @@ sheets-cli update key --sheet "Projects" --key-col "Name" --key "Acme" --set '{"
 
 ## Installation
 
-**Prerequisites:** [Bun](https://bun.sh) runtime
+Install the CLI globally (uses a native binary for your OS — no Bun required at runtime):
+
+```bash
+npm install -g @zahrevsky/sheets-cli
+# or: bun install -g @zahrevsky/sheets-cli
+# or: pnpm add -g @zahrevsky/sheets-cli
+```
+
+Then run `sheets-cli` from any directory.
+
+**Supported platforms:** macOS (Apple Silicon and Intel), Linux (glibc and musl/Alpine, x64 and arm64), Windows (x64 and arm64).
+
+### If install works but `sheets-cli` fails
+
+You may see:
+
+```text
+sheets-cli: prebuilt binary package is not installed for <platform>-<arch>.
+Your OS/CPU may be unsupported, or the install did not finish correctly.
+```
+
+This means there is no prebuilt binary for your machine (or the platform package did not install). Try:
+
+1. Reinstall: `npm install -g @zahrevsky/sheets-cli@latest`
+2. If it still fails, [build from source](#building-from-source) below.
+
+### Building from source
+
+For development or unsupported platforms. **Requires [Bun](https://bun.sh).**
 
 ```bash
 git clone https://github.com/zahrevsky/sheets-cli.git
 cd sheets-cli
 bun install
 bun run build
-
-# Binary at ./dist/sheets-cli
+./dist/sheets-cli --help
 ```
 
 <details>
-<summary><strong>Add to PATH</strong></summary>
+<summary><strong>Add to PATH (source build)</strong></summary>
 
 ```bash
-# Symlink
 ln -s "$(pwd)/dist/sheets-cli" /usr/local/bin/sheets-cli
-
-# Or add to shell config
-echo 'export PATH="$PATH:/path/to/sheets-cli/dist"' >> ~/.zshrc
+# or: export PATH="$PATH:$(pwd)/dist"
 ```
 
 </details>

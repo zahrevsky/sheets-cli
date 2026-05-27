@@ -1,0 +1,40 @@
+{
+  "name": "@zahrevsky/sheets-cli",
+  "version": "1.0.3",
+  "description": "Composable Google Sheets CLI for humans and agents",
+  "license": "MIT",
+  "author": "zahrevsky",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zahrevsky/sheets-cli.git",
+    "directory": "npm/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/zahrevsky/sheets-cli/issues"
+  },
+  "homepage": "https://github.com/zahrevsky/sheets-cli#readme",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "sheets-cli": "bin/sheets-cli.js"
+  },
+  "files": [
+    "bin",
+    "README.md"
+  ],
+  "optionalDependencies": {
+    "@zahrevsky/sheets-cli-darwin-arm64": "1.0.3",
+    "@zahrevsky/sheets-cli-darwin-x64": "1.0.3",
+    "@zahrevsky/sheets-cli-linux-arm64": "1.0.3",
+    "@zahrevsky/sheets-cli-linux-arm64-musl": "1.0.3",
+    "@zahrevsky/sheets-cli-linux-x64": "1.0.3",
+    "@zahrevsky/sheets-cli-linux-x64-musl": "1.0.3",
+    "@zahrevsky/sheets-cli-win32-arm64": "1.0.3",
+    "@zahrevsky/sheets-cli-win32-x64": "1.0.3"
+  }
+}
