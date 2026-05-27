@@ -1,5 +1,5 @@
-# Daily dependency updates. PRs are for review — nothing auto-merges.
-# googleapis bumps should run: bun scripts/generate-request-kinds.ts && bun test
+# Daily dependency updates (patch, minor, and major). PRs are for review — nothing auto-merges.
+# After googleapis bumps: bun scripts/generate-request-kinds.ts && bun test && CHANGELOG
 version: 2
 updates:
   - package-ecosystem: bun
