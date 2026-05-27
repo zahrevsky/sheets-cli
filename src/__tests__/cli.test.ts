@@ -292,11 +292,11 @@ describe("CLI", () => {
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain("list");
-      expect(stdout).toContain("tabs");
+      expect(stdout).toContain("sheets");
     });
 
-    test("spreadsheet tabs returns valid JSON", async () => {
-      const { stdout, exitCode } = await runCli(["spreadsheet", "tabs"]);
+    test("spreadsheet sheets returns valid JSON", async () => {
+      const { stdout, exitCode } = await runCli(["spreadsheet", "sheets"]);
 
       expect([0, 10, 20]).toContain(exitCode);
       const output = parseOutput(stdout);
@@ -330,7 +330,7 @@ describe("CLI", () => {
     test("--spreadsheet option is accepted", async () => {
       const { stdout } = await runCli([
         "spreadsheet",
-        "tabs",
+        "sheets",
         "--spreadsheet",
         "custom-spreadsheet-id",
       ]);

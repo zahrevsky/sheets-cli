@@ -69,5 +69,11 @@ describe.skipIf(!INTEGRATION)("sheets integration", () => {
     const result = await listSpreadsheetsInDrive(auth, { limit: 5 });
     expect(Array.isArray(result.spreadsheets)).toBe(true);
     expect(result.count).toBeGreaterThanOrEqual(0);
+    if (result.spreadsheets.length > 0) {
+      const first = result.spreadsheets[0];
+      expect(["my_drive", "shared_drive", "shared_with_me"]).toContain(
+        first?.origin ?? ""
+      );
+    }
   });
 });

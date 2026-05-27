@@ -124,7 +124,7 @@ export function registerSpreadsheetCommands(
     });
 
   spreadsheet
-    .command("tabs")
+    .command("sheets")
     .description("List sheet tabs inside one spreadsheet")
     .option(
       "--spreadsheet <id>",
@@ -132,7 +132,7 @@ export function registerSpreadsheetCommands(
       deps.defaultSpreadsheetId
     )
     .action(async (opts) => {
-      const cmd = "spreadsheet tabs";
+      const cmd = "spreadsheet sheets";
       const spreadsheetId = deps.resolveSpreadsheet(cmd, opts.spreadsheet);
       if (!spreadsheetId) {
         return process.exit(10);
@@ -143,8 +143,8 @@ export function registerSpreadsheetCommands(
       }
 
       try {
-        const tabs = await listSheets(client, spreadsheetId);
-        deps.output(success(cmd, { tabs }, { spreadsheetId }));
+        const sheets = await listSheets(client, spreadsheetId);
+        deps.output(success(cmd, { sheets }, { spreadsheetId }));
         process.exit(0);
       } catch (err) {
         const res = deps.handleApiError(cmd, err, spreadsheetId);

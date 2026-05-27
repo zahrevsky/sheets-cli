@@ -6,6 +6,10 @@ export type SpreadsheetFile = {
   name: string;
   url: string | null;
   modified: string | null;
+  origin: "my_drive" | "shared_drive" | "shared_with_me";
+  driveId: string | null;
+  owners: { displayName: string | null; email: string | null }[];
+  parentIds: string[];
 };
 
 export type ListSpreadsheetsResult = {
@@ -42,7 +46,8 @@ export async function listSpreadsheetsInDrive(
 
   const res = await drive.files.list({
     q: buildSpreadsheetsListQuery(opts.nameQuery),
-    fields: "nextPageToken, files(id, name, webViewLink, modifiedTime)",
+    fields:
+      "nextPageToken, files(id, name, webViewLink, modifiedTime, driveId, ownedByMe, owners(displayName,emailAddress), parents)",
     pageSize,
     pageToken: opts.pageToken,
     orderBy: "modifiedTime desc",
@@ -61,6 +66,22 @@ export async function listSpreadsheetsInDrive(
         name: f.name,
         url: f.webViewLink ?? null,
         modified: f.modifiedTime ?? null,
+        origin: (() => {
+          if (f.driveId) {
+            return "shared_drive";
+          }
+          if (f.ownedByMe) {
+            return "my_drive";
+          }
+          return "shared_with_me";
+        })(),
+        driveId: f.driveId ?? null,
+        owners:
+          f.owners?.map((o) => ({
+            displayName: o.displayName ?? null,
+            email: o.emailAddress ?? null,
+          })) ?? [],
+        parentIds: f.parents ?? [],
       })),
     count: files.length,
     nextPageToken: res.data.nextPageToken ?? null,

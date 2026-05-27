@@ -28,7 +28,7 @@
 
 ---
 
-Fast, deterministic CLI for Google Sheets. Read tables, append rows, update cells by key or index, batch operations, and spreadsheet structure/formatting via `spreadsheets.batchUpdate`—all with **JSON stdout** for agents (shell only, **not** an MCP server).
+Fast, deterministic CLI for Google Sheets. Read tables, append rows, update cells by key or index, batch operations, and spreadsheet structure/formatting via `spreadsheets.batchUpdate`—all with **JSON stdout**.
 
 ```bash
 # Read a sheet as structured data
@@ -108,7 +108,7 @@ Get the ID from your sheet URL: `docs.google.com/spreadsheets/d/<ID>/edit`
 ### 5. Use
 
 ```bash
-sheets-cli spreadsheet tabs --spreadsheet <id>
+sheets-cli spreadsheet sheets --spreadsheet <id>
 sheets-cli read table --spreadsheet <id> --sheet "Sheet1" --limit 5
 sheets-cli append --spreadsheet <id> --sheet "Sheet1" --values '{"Name":"New Item","Status":"Active"}'
 ```
@@ -130,7 +130,7 @@ sheets-cli auth logout
 ```bash
 sheets-cli spreadsheet list [--name "<query>"] [--limit 100]   # Your spreadsheet files (Drive)
 sheets-cli spreadsheet find --name "<query>" [--limit 10]      # Search files by name
-sheets-cli spreadsheet tabs [--spreadsheet <id>]                 # Tabs inside one file
+sheets-cli spreadsheet sheets [--spreadsheet <id>]               # Sheets inside one file
 sheets-cli sheet info --sheet "<name>" [--spreadsheet <id>]
 sheets-cli sheet info --gid <gid> [--spreadsheet <id>]
 sheets-cli header --sheet "<name>" [--header-row 1]
@@ -245,7 +245,7 @@ All commands return JSON to stdout:
 
 ## For Agents
 
-**Console + JSON only.** Agents should run `sheets-cli` in the shell and parse stdout. We do not ship an MCP server. See [docs/agent-contract.md](docs/agent-contract.md) and [docs/instructions.md](docs/instructions.md).
+**Console + JSON only.** Agents should run `sheets-cli` in the shell and parse stdout.
 
 ### Install Skill
 
@@ -306,7 +306,14 @@ bun run lint         # Lint
 bun run test         # Tests
 ```
 
-See [docs/testing.md](docs/testing.md) for regression and optional integration tests.
+### Testing
+
+```bash
+bun test
+bun run typecheck
+bun x ultracite check
+SHEETS_CLI_INTEGRATION=1 bun test src/__tests__/integration
+```
 
 <br>
 

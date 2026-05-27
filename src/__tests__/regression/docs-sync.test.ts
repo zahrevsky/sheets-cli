@@ -63,8 +63,8 @@ describe("docs sync", () => {
     expect(pkg.repository?.url).toContain("zahrevsky/sheets-cli");
   });
 
-  test("SKILL.md states CLI-only, not MCP", () => {
-    expect(SKILL_CONTENT.toLowerCase()).toContain("not");
-    expect(SKILL_CONTENT.toLowerCase()).toContain("mcp");
+  test("SKILL.md mentions JSON stdout contract", () => {
+    expect(SKILL_CONTENT.toLowerCase()).toContain("json");
+    expect(SKILL_CONTENT.toLowerCase()).toContain("stdout");
   });
 });
