@@ -1,6 +1,7 @@
 {
   "name": "sheets-cli",
-  "version": "1.0.2",
+  "version": "1.0.3",
+  "private": true,
   "module": "src/cli.ts",
   "license": "MIT",
   "author": "zahrevsky",
@@ -30,6 +31,9 @@
     "dev": "bun --hot ./src/cli.ts",
     "build": "bun build ./src/cli.ts --compile --outfile ./dist/sheets-cli",
     "build:deterministic": "bun build ./src/cli.ts --compile --no-compile-autoload-dotenv --no-compile-autoload-bunfig --outfile ./dist/sheets-cli",
+    "build:npm": "bun scripts/build-release-binaries.ts",
+    "release:sync-versions": "bun scripts/sync-npm-versions.ts",
+    "release:prepare": "bun scripts/sync-npm-versions.ts && bun run build:npm",
     "test": "bun test",
     "lint": "biome check",
     "lint:fix": "biome check --write",

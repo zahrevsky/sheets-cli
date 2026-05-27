@@ -17,6 +17,14 @@ jobs:
       - run: bun run typecheck
       - run: bun x ultracite check
 
+  npm-binaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun scripts/build-release-binaries.ts
+
   integration:
     runs-on: ubuntu-latest
     if: ${{ secrets.SHEETS_CLI_INTEGRATION == '1' }}

@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Set package version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          export VERSION="${RELEASE_TAG#v}"
+          node -e "
+            const fs = require('node:fs');
+            const pkg = JSON.parse(fs.readFileSync('npm/cli/package.json', 'utf8'));
+            pkg.version = process.env.VERSION;
+            fs.writeFileSync('npm/cli/package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Sync npm package versions
+        run: bun scripts/sync-npm-versions.ts
+
+      - name: Build native binaries (all platforms)
+        run: bun scripts/build-release-binaries.ts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-release
+          path: npm/
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-release
+          path: npm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish platform packages
+        run: |
+          set -euo pipefail
+          for dir in platforms/*/; do
+            echo "Publishing ${dir}..."
+            npm publish "${dir}" --access public --provenance
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @zahrevsky/sheets-cli
+        run: npm publish cli --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
