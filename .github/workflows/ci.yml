@@ -27,23 +27,27 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
-    if: ${{ secrets.SHEETS_CLI_INTEGRATION == '1' }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install
+      - name: Require Google API credentials
+        env:
+          SHEETS_CLI_CREDENTIALS_JSON: ${{ secrets.SHEETS_CLI_CREDENTIALS_JSON }}
+          SHEETS_CLI_TOKEN_JSON: ${{ secrets.SHEETS_CLI_TOKEN_JSON }}
+        run: |
+          if [ -z "$SHEETS_CLI_CREDENTIALS_JSON" ] || [ -z "$SHEETS_CLI_TOKEN_JSON" ]; then
+            echo "::error::Missing SHEETS_CLI_CREDENTIALS_JSON or SHEETS_CLI_TOKEN_JSON."
+            echo "::error::For workflows triggered by dependabot[bot], duplicate these values as Dependabot secrets (Settings → Secrets and variables → Dependabot) with the same names."
+            exit 1
+          fi
       - name: Integration tests (live Google API)
         env:
           SHEETS_CLI_INTEGRATION: "1"
           SHEETS_CLI_CREDENTIALS_JSON: ${{ secrets.SHEETS_CLI_CREDENTIALS_JSON }}
           SHEETS_CLI_TOKEN_JSON: ${{ secrets.SHEETS_CLI_TOKEN_JSON }}
         run: |
-          if [ -n "$SHEETS_CLI_CREDENTIALS_JSON" ]; then
-            mkdir -p "$HOME/.sheets-cli"
-            echo "$SHEETS_CLI_CREDENTIALS_JSON" > "$HOME/.sheets-cli/credentials.json"
-          fi
-          if [ -n "$SHEETS_CLI_TOKEN_JSON" ]; then
-            mkdir -p "$HOME/.sheets-cli"
-            echo "$SHEETS_CLI_TOKEN_JSON" > "$HOME/.sheets-cli/token.json"
-          fi
+          mkdir -p "$HOME/.sheets-cli"
+          echo "$SHEETS_CLI_CREDENTIALS_JSON" > "$HOME/.sheets-cli/credentials.json"
+          echo "$SHEETS_CLI_TOKEN_JSON" > "$HOME/.sheets-cli/token.json"
           bun test src/__tests__/integration

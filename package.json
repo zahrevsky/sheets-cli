@@ -38,7 +38,9 @@
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "typecheck": "tsgo --noEmit",
-    "generate:request-kinds": "bun scripts/generate-request-kinds.ts"
+    "generate:request-kinds": "bun scripts/generate-request-kinds.ts",
+    "workflow:setup-tools": "bash scripts/setup-workflow-tools.sh",
+    "workflow:lint": "bash scripts/validate-workflows.sh"
   },
   "dependencies": {
     "commander": "^14.0.2",

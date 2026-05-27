@@ -349,6 +349,33 @@ bun x ultracite check
 SHEETS_CLI_INTEGRATION=1 bun test src/__tests__/integration
 ```
 
+### CI secrets (Actions + Dependabot)
+
+Integration job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) always runs live Google API tests. It needs:
+
+| Secret | Purpose |
+| --- | --- |
+| `SHEETS_CLI_CREDENTIALS_JSON` | OAuth client JSON |
+| `SHEETS_CLI_TOKEN_JSON` | OAuth token JSON (with `refresh_token`) |
+
+Add both under **Settings → Secrets and variables → Actions**.
+
+**Dependabot PRs:** GitHub does **not** expose Actions secrets to workflows triggered by `dependabot[bot]` (same security model as fork PRs — malicious deps could exfiltrate secrets). PR branches live in your repo, but the *actor* is still Dependabot. Duplicate the **same two secret names and values** under **Settings → Secrets and variables → Dependabot**. The workflow uses identical `${{ secrets.NAME }}` syntax; only the secret store differs. See [Troubleshooting Dependabot on GitHub Actions](https://docs.github.com/en/code-security/dependabot/troubleshooting-dependabot/troubleshooting-dependabot-on-github-actions).
+
+`SHEETS_CLI_INTEGRATION=1` is set only in the `integration` job, not as a repository secret.
+
+### Workflow validation (local)
+
+```bash
+bun run workflow:lint   # installs actionlint + act into .bin/, then validates
+```
+
+Uses [actionlint](https://github.com/rhysd/actionlint) and [act](https://github.com/nektos/act): lists workflows, runs `test` and (when credentials exist) `integration` jobs in Docker.
+
+Secrets for act come from `SHEETS_CLI_*` env vars or `~/.sheets-cli/*.json` (`scripts/load-act-secrets.sh`). **GitHub Actions secrets cannot be read via `gh`** (write-only API); `bash scripts/gh-act-secrets-hint.sh` explains. Cloud Agent injects the same env vars used in CI.
+
+`workflow:lint` starts Docker (`dockerd --storage-driver=vfs` on nested VMs), uses image `catthehacker/ubuntu:act-22.04`, and retries only while GitHub/git endpoints are down — not on test failures.
+
 ### Automation
 
 **Dependabot** ([`.github/dependabot.yml`](.github/dependabot.yml)) runs daily for Bun (patch, minor, and major) and weekly for GitHub Actions. It opens pull requests for review; nothing auto-merges.

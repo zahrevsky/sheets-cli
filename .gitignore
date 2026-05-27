@@ -79,5 +79,8 @@ $RECYCLE.BIN/
 # Bun cache
 .bun/
 
+# Local GitHub Actions tooling (scripts/setup-workflow-tools.sh)
+.bin/
+
 # Biome cache (if any)
 .biome/
