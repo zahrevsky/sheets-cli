@@ -8,6 +8,7 @@ Publishes `@zahrevsky/sheets-cli` and platform binary packages to the npm regist
 - Run `bun scripts/sync-npm-versions.ts` to copy that version to root `package.json`, all platform packages, and `optionalDependencies`.
 - CLI `--version` reads root `package.json` at build time (keep root in sync before `bun run build:npm`).
 - **Independent semver** from [gmickel/sheets-cli](https://github.com/gmickel/sheets-cli) (upstream was `1.0.2` in git only; not published to npm under that name). This package starts at **`1.0.0`** — first release of `@zahrevsky/sheets-cli`, not a continuation of upstream’s version counter.
+- **Changelog:** when bumping the version for a release, update [`CHANGELOG.md`](../CHANGELOG.md) in the same change: move notes from `[Unreleased]` into a new `## [x.y.z] - YYYY-MM-DD` section (or add entries there), then leave `[Unreleased]` empty or with only in-flight work.
 
 ## Publishing auth (GitHub Actions)
 
