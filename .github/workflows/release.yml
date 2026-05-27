@@ -57,20 +57,17 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
 
       - name: Publish platform packages
         run: |
           set -euo pipefail
           for dir in platforms/*/; do
             echo "Publishing ${dir}..."
-            npm publish "${dir}" --access public --provenance
+            npm publish "${dir}" --access public
           done
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @zahrevsky/sheets-cli
-        run: npm publish cli --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish cli --access public
