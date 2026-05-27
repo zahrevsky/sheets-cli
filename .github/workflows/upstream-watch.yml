@@ -1,0 +1,57 @@
+name: Upstream watch
+
+# Daily: compare upstream HEAD to .github/upstream-last-seen.sha; webhook only if it moved.
+on:
+  schedule:
+    - cron: "30 7 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: false
+
+env:
+  # Edit this line to point at the upstream repository (owner/name).
+  UPSTREAM_REPO: gmickel/sheets-cli
+  UPSTREAM_BRANCH: main
+
+jobs:
+  watch-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Check for new upstream commits
+        id: check
+        env:
+          UPSTREAM_REPO: ${{ env.UPSTREAM_REPO }}
+          UPSTREAM_BRANCH: ${{ env.UPSTREAM_BRANCH }}
+        run: |
+          RESULT=$(bun scripts/sync-upstream-sha.ts --check)
+          echo "$RESULT" | tee upstream-check.json
+          STATUS=$(echo "$RESULT" | bun -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).status)")
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "Upstream \`${{ env.UPSTREAM_REPO }}\` @ \`${{ env.UPSTREAM_BRANCH }}\`: **$STATUS**" >> "$GITHUB_STEP_SUMMARY"
+          echo "$RESULT" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Trigger Cursor webhook
+        if: steps.check.outputs.status == 'updates'
+        env:
+          CURSOR_UPSTREAM_WEBHOOK_URL: ${{ secrets.CURSOR_UPSTREAM_WEBHOOK_URL }}
+          CURSOR_UPSTREAM_WEBHOOK_BEARER: ${{ secrets.CURSOR_UPSTREAM_WEBHOOK_BEARER }}
+        run: |
+          if [ -z "$CURSOR_UPSTREAM_WEBHOOK_URL" ]; then
+            echo "::warning::CURSOR_UPSTREAM_WEBHOOK_URL is not set; skipping."
+            exit 0
+          fi
+          HTTP_CODE=$(curl --silent --show-error --output /tmp/cursor-webhook-response.txt --write-out "%{http_code}" \
+            --request POST \
+            --url "$CURSOR_UPSTREAM_WEBHOOK_URL" \
+            --header "Authorization: Bearer ${CURSOR_UPSTREAM_WEBHOOK_BEARER}")
+          echo "Webhook HTTP ${HTTP_CODE}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::warning::Webhook returned HTTP ${HTTP_CODE}"
+            [ -f /tmp/cursor-webhook-response.txt ] && cat /tmp/cursor-webhook-response.txt
+          fi

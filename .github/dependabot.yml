@@ -1,0 +1,34 @@
+# Daily dependency updates (patch, minor, and major). PRs are for review — nothing auto-merges.
+# After googleapis bumps: bun scripts/generate-request-kinds.ts && bun test && CHANGELOG
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: daily
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      google-apis:
+        patterns:
+          - googleapis*
+          - google-auth-library*
+          - gaxios*
+          - googleapis-common*
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore

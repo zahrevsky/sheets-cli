@@ -349,6 +349,38 @@ bun x ultracite check
 SHEETS_CLI_INTEGRATION=1 bun test src/__tests__/integration
 ```
 
+### Automation
+
+**Dependabot** ([`.github/dependabot.yml`](.github/dependabot.yml)) runs daily for Bun (patch, minor, and major) and weekly for GitHub Actions. It opens pull requests for review; nothing auto-merges.
+
+After a `googleapis` bump:
+
+```bash
+bun scripts/generate-request-kinds.ts
+bun test
+```
+
+Update [`CHANGELOG.md`](CHANGELOG.md) when the release matters to users.
+
+**Upstream watch** ([`.github/workflows/upstream-watch.yml`](.github/workflows/upstream-watch.yml)) runs daily, compares upstream `main` to [`.github/upstream-last-seen.sha`](.github/upstream-last-seen.sha), and POSTs a [Cursor automation webhook](https://cursor.com/docs/cloud-agent/automations) only when upstream has moved. The webhook needs only the URL and `Authorization: Bearer …` (no body); configure the agent prompt in Cursor.
+
+Edit upstream in the workflow:
+
+```yaml
+env:
+  UPSTREAM_REPO: gmickel/sheets-cli
+  UPSTREAM_BRANCH: main
+```
+
+GitHub Actions secrets: `CURSOR_UPSTREAM_WEBHOOK_URL`, `CURSOR_UPSTREAM_WEBHOOK_BEARER`.
+
+The `.sha` file records the last upstream commit we have acknowledged (CI does not update it). Initial value matches the upstream commit at fork import (`560430f`). Refresh locally or in an agent PR:
+
+```bash
+UPSTREAM_REPO=gmickel/sheets-cli bun scripts/sync-upstream-sha.ts          # print upstream HEAD
+UPSTREAM_REPO=gmickel/sheets-cli bun scripts/sync-upstream-sha.ts --write  # write .github/upstream-last-seen.sha
+```
+
 <br>
 
 ## Acknowledgements
