@@ -65,6 +65,7 @@ jobs:
         working-directory: npm
         run: |
           set -euo pipefail
+          find platforms -type f \( -path '*/bin/sheets-cli' -o -path '*/bin/sheets-cli.exe' \) -exec chmod +x {} +
           publish_if_missing() {
             local dir="${1%/}/"
             local name version
@@ -80,4 +81,4 @@ jobs:
           for dir in platforms/*/; do
             publish_if_missing "${dir}"
           done
-          publish_if_missing "./cli"
+          publish_if_missing "cli"
