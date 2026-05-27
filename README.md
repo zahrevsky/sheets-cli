@@ -332,6 +332,8 @@ sheets-cli update key --sheet "Tasks" --key-col "ID" --key "TASK-42" --set '{"St
 
 ## Development
 
+Automation (Dependabot, googleapis health checks, upstream fork watch): see [docs/automation.md](docs/automation.md).
+
 ```bash
 bun run dev          # Hot-reload
 bun run build        # Compile binary

@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `CHANGELOG.md` and a release-process note to update it when bumping versions.
+- Dependabot (daily) for `googleapis` and other Bun/npm dependencies.
+- Scheduled `googleapis-health` workflow (type registry tests, no live API).
+- Scheduled `upstream-watch` for [gmickel/sheets-cli](https://github.com/gmickel/sheets-cli) with optional Cursor Cloud Agent via `CURSOR_API_KEY`.
+- [docs/automation.md](docs/automation.md) describing setup.
 
 ## [1.0.3] - 2026-05-27
 

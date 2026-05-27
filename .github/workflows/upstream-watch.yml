@@ -1,0 +1,137 @@
+name: Upstream watch
+
+# Tracks https://github.com/gmickel/sheets-cli for new commits on main.
+# Opens a GitHub issue and optionally starts a Cursor Cloud Agent (no auto-merge).
+on:
+  schedule:
+    - cron: "30 7 * * *"
+  workflow_dispatch:
+    inputs:
+      trigger_cursor_agent:
+        description: Start Cursor Cloud Agent (requires CURSOR_API_KEY)
+        type: boolean
+        default: false
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_FETCH_REF: upstream/main
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install
+
+      - name: Fetch upstream main
+        run: |
+          git fetch --quiet https://github.com/gmickel/sheets-cli.git main:refs/remotes/upstream/main
+          echo "UPSTREAM_HEAD=$(git rev-parse upstream/main)" >> "$GITHUB_ENV"
+
+      - name: Evaluate upstream delta
+        id: upstream
+        env:
+          UPSTREAM_HEAD: ${{ env.UPSTREAM_HEAD }}
+        run: |
+          RESULT=$(bun scripts/check-upstream-sync.ts check)
+          echo "$RESULT" | tee upstream-result.json
+          STATUS=$(echo "$RESULT" | bun -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).status)")
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+
+      - name: Bootstrap upstream pointer (first run)
+        if: steps.upstream.outputs.status == 'bootstrap'
+        run: bun scripts/check-upstream-sync.ts bootstrap
+
+      - name: Commit bootstrap pointer
+        if: steps.upstream.outputs.status == 'bootstrap'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: bootstrap upstream last-seen SHA"
+          file_pattern: .github/upstream-last-seen.sha
+          skip_dirty_check: true
+
+      - name: Ensure upstream-sync label exists
+        if: steps.upstream.outputs.status == 'updates'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create "upstream-sync" --color "1D76DB" --description "New commits on upstream gmickel/sheets-cli" 2>/dev/null || true
+
+      - name: Open upstream sync issue
+        if: steps.upstream.outputs.status == 'updates'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bun scripts/check-upstream-sync.ts issue-body upstream-result.json > issue-body.md
+          SHORT_HEAD=$(bun -e "const r=require('./upstream-result.json'); console.log(r.upstreamHead.slice(0,7))")
+          gh issue create \
+            --title "upstream: new commits on gmickel/sheets-cli (${SHORT_HEAD})" \
+            --label "upstream-sync" \
+            --body-file issue-body.md
+
+      - name: Detect Cursor API key
+        id: cursor_key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -n "$CURSOR_API_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Start Cursor Cloud Agent
+        if: >-
+          steps.upstream.outputs.status == 'updates' &&
+          steps.cursor_key.outputs.present == 'true' &&
+          (github.event_name == 'schedule' || inputs.trigger_cursor_agent == true)
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          bun scripts/check-upstream-sync.ts cursor-prompt upstream-result.json > cursor-prompt.txt
+          bun -e "
+            const fs = require('fs');
+            const prompt = fs.readFileSync('cursor-prompt.txt', 'utf8');
+            const body = {
+              prompt: { text: prompt },
+              repos: [{
+                url: 'https://github.com/${{ github.repository }}',
+                startingRef: 'main',
+              }],
+              autoCreatePR: false,
+            };
+            fs.writeFileSync('cursor-agent.json', JSON.stringify(body));
+          "
+          HTTP_CODE=$(curl --silent --show-error --output /tmp/cursor-response.json --write-out "%{http_code}" \
+            --request POST \
+            --url https://api.cursor.com/v1/agents \
+            -u "${CURSOR_API_KEY}:" \
+            --header "Content-Type: application/json" \
+            --data @cursor-agent.json)
+          echo "Cursor API HTTP ${HTTP_CODE}" >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/cursor-response.json >> "$GITHUB_STEP_SUMMARY"
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::warning::Cursor Cloud Agent request failed (use a Cloud Agents API key from Cursor Dashboard → Integrations)."
+          fi
+
+      - name: Record upstream HEAD
+        if: steps.upstream.outputs.status == 'updates'
+        run: bun scripts/check-upstream-sync.ts write-last-seen
+
+      - name: Commit upstream pointer
+        if: steps.upstream.outputs.status == 'updates'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: record upstream HEAD after sync notification"
+          file_pattern: .github/upstream-last-seen.sha
+          skip_dirty_check: true
