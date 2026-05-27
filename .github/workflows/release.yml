@@ -61,15 +61,23 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
-      - name: Publish platform packages
+      - name: Publish npm packages
         working-directory: npm
         run: |
           set -euo pipefail
-          for dir in platforms/*/; do
-            echo "Publishing ${dir}..."
+          publish_if_missing() {
+            local dir="$1"
+            local name version
+            name=$(node -p "require('./${dir}package.json').name")
+            version=$(node -p "require('./${dir}package.json').version")
+            if npm view "${name}@${version}" version >/dev/null 2>&1; then
+              echo "Skip ${name}@${version} (already on npm)"
+              return 0
+            fi
+            echo "Publishing ${name}@${version} from ${dir}..."
             npm publish "${dir}" --access public
+          }
+          for dir in platforms/*/; do
+            publish_if_missing "${dir}"
           done
-
-      - name: Publish @zahrevsky/sheets-cli
-        working-directory: npm
-        run: npm publish ./cli --access public
+          publish_if_missing "./cli"
