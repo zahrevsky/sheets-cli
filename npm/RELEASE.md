@@ -9,11 +9,22 @@ Publishes `@zahrevsky/sheets-cli` and platform binary packages to the npm regist
 - CLI `--version` reads root `package.json` at build time (keep root in sync before `bun run build:npm`).
 - **Independent semver** from [gmickel/sheets-cli](https://github.com/gmickel/sheets-cli) (upstream was `1.0.2` in git only; not published to npm under that name). This package starts at **`1.0.0`** — first release of `@zahrevsky/sheets-cli`, not a continuation of upstream’s version counter.
 
-## Secrets (GitHub Actions)
+## Publishing auth (GitHub Actions)
 
-| Secret | Purpose |
-|--------|---------|
-| `NPM_TOKEN` | npm automation token with publish access to `@zahrevsky` |
+Publishes use **npm Trusted Publisher** (OIDC) — no `NPM_TOKEN` secret.
+
+On [npmjs.com](https://www.npmjs.com), each package under `@zahrevsky` must have a trusted publisher for this repo:
+
+| Field | Value |
+|-------|--------|
+| Organization / user | `zahrevsky` |
+| Repository | `sheets-cli` |
+| Workflow filename | `release.yml` |
+| Environment | *(empty unless you add a GitHub Environment)* |
+
+The workflow needs `permissions.id-token: write` (see `.github/workflows/release.yml`). The publish job uses Node **24** (npm ≥ 11.5.1). `repository.url` in each `package.json` must match `https://github.com/zahrevsky/sheets-cli.git`.
+
+After the first successful OIDC publish, you can revoke the old automation token and optionally set the package to disallow token publishes (npm → Settings → Publishing access).
 
 ## Trigger
 
