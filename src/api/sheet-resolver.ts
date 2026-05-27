@@ -3,7 +3,7 @@ import type { sheets_v4 } from "googleapis";
 export type SheetRef = { sheetId: number; title: string };
 
 export class SheetResolver {
-  private cache = new Map<string, SheetRef[]>();
+  private readonly cache = new Map<string, SheetRef[]>();
 
   async list(
     sheets: sheets_v4.Sheets,

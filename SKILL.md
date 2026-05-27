@@ -7,11 +7,11 @@ description: Read, write, and update Google Sheets data via CLI. Use when the us
 
 CLI for Google Sheets primitives. Read tables, append rows, update cells by key or index, batch operations.
 
-**Agents:** use shell commands and parse **JSON from stdout**. This tool is **not** an MCP server; do not look for MCP tools for Sheets—use `sheets-cli` directly.
+**Agents:** use shell commands and parse **JSON from stdout**.
 
 > **Installation:** `sheets-cli` is already installed and available in the user's PATH. Run commands directly—no installation needed.
 
-See `docs/instructions.md` and `docs/agent-contract.md` in the repo for output shape and workflows.
+This skill is self-contained; rely on CLI JSON stdout and exit codes.
 
 ## Quick Reference
 
@@ -21,7 +21,7 @@ sheets-cli spreadsheet list [--name "Projects"] [--limit 100]
 sheets-cli spreadsheet find --name "Projects"
 
 # List sheets/tabs
-sheets-cli spreadsheet tabs --spreadsheet <id-or-url>
+sheets-cli spreadsheet sheets --spreadsheet <id-or-url>
 
 # Read table data
 sheets-cli read table --spreadsheet <id> --sheet "Sheet1" --limit 100
@@ -72,7 +72,7 @@ Searches Google Drive for spreadsheets matching the name. Returns ID, name, URL.
 
 ### List Sheets/Tabs
 ```bash
-sheets-cli spreadsheet tabs --spreadsheet <id>
+sheets-cli spreadsheet sheets --spreadsheet <id>
 ```
 
 ### Sheet Info
