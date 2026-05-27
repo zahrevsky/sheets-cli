@@ -239,14 +239,6 @@ Errors:
 10. **Empty sheets:** `append` can bootstrap by writing a header row from JSON keys
 11. **`read table --range`** accepts `A1:Z` (auto-prefixed with the sheet)
 
-## Install skill
-
-```bash
-sheets-cli install-skill           # project .claude/skills/
-sheets-cli install-skill --global  # ~/.claude/skills/
-sheets-cli install-skill --codex   # ~/.codex/skills/
-```
-
 ## Exit Codes
 
 | Code | Meaning |

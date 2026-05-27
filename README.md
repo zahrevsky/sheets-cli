@@ -40,7 +40,7 @@ sheets-cli update key --sheet "Projects" --key-col "Name" --key "Acme" --set '{"
 
 <br>
 
-> **🆕 Agent Skills** — Install as a skill for [Claude Code](https://claude.ai/code), [OpenAI Codex](https://openai.com/index/openai-codex/), or VS Code (Insiders preview; enable `chat.useAgentSkills`). The agent automatically discovers sheets-cli when you mention spreadsheets. See [For Agents](#for-agents).
+> **🆕 Agent Skills** — Install with [`npx skills`](https://www.npmjs.com/package/skills) for [Claude Code](https://claude.ai/code), [OpenAI Codex](https://openai.com/index/openai-codex/), [Cursor](https://cursor.com), and other agents. The agent automatically discovers sheets-cli when you mention spreadsheets. See [For Agents](#for-agents).
 
 <br>
 
@@ -249,21 +249,31 @@ All commands return JSON to stdout:
 
 ### Install Skill
 
-```bash
-# Claude Code
-sheets-cli install-skill           # Project: ./.claude/skills/sheets-cli/SKILL.md
-sheets-cli install-skill --global  # Personal: ~/.claude/skills/sheets-cli/SKILL.md
+Install the [Agent Skill](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview) with the [skills CLI](https://www.npmjs.com/package/skills):
 
-# OpenAI Codex
-sheets-cli install-skill --codex   # ~/.codex/skills/sheets-cli/SKILL.md
+```bash
+# From GitHub (recommended)
+npx skills add zahrevsky/sheets-cli --skill sheets-cli
+
+# Project scope (committed with your repo)
+npx skills add zahrevsky/sheets-cli --skill sheets-cli -y
+
+# Global scope (available across all projects)
+npx skills add zahrevsky/sheets-cli --skill sheets-cli -g -y
+
+# Local clone during development
+npx skills add ./path/to/sheets-cli --skill sheets-cli
 ```
 
-Installs an [Agent Skill](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview) that teaches the agent how to use sheets-cli. After installing, the agent automatically discovers sheets-cli when you mention spreadsheets, Google Sheets, or sheet names.
+List available skills without installing:
+
+```bash
+npx skills add zahrevsky/sheets-cli --list
+```
+
+After installing, the agent discovers sheets-cli when you mention spreadsheets, Google Sheets, or sheet names. **Restart the agent** to load the skill.
 
 > **Codex**: Requires `skills = true` in `~/.codex/config.toml` under `[features]`.
-> **VS Code**: Agent Skills support is in preview and only available in VS Code Insiders. Enable `chat.useAgentSkills` to use Agent Skills.
-
-**Restart the agent** after installing to load the skill.
 
 ### Workflow Pattern
 

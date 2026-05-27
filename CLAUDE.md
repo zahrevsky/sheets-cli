@@ -7,9 +7,7 @@ alwaysApply: false
 ## Skill Sync
 
 ```bash
-bun run build
-sheets-cli install-skill --global  # ~/.claude/skills/
-sheets-cli install-skill --codex   # ~/.codex/skills/
+npx skills add . --skill sheets-cli -y
 ```
 
 ---
