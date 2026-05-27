@@ -1,6 +1,6 @@
 {
   "name": "@zahrevsky/sheets-cli-darwin-x64",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Native sheets-cli binary (darwin-x64)",
   "license": "MIT",
   "author": "zahrevsky",
