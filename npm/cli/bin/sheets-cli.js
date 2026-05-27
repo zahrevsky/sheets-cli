@@ -55,8 +55,8 @@ if (!binPath) {
 let executablePath;
 try {
   const cliPackageJson = require.resolve("@zahrevsky/sheets-cli/package.json");
-  const scopeDir = path.dirname(path.dirname(cliPackageJson));
-  executablePath = require.resolve(binPath, { paths: [scopeDir] });
+  const cliRootDir = path.dirname(cliPackageJson);
+  executablePath = require.resolve(binPath, { paths: [cliRootDir] });
 } catch {
   console.error(
     `sheets-cli: prebuilt binary package is not installed for ${platform}-${arch}.\n` +
