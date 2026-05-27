@@ -42,6 +42,6 @@
   },
   "dependencies": {
     "commander": "^14.0.2",
-    "googleapis": "^169.0.0"
+    "googleapis": "^172.0.0"
   }
 }
