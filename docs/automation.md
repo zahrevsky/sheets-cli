@@ -8,7 +8,7 @@ After a `googleapis` bump: `bun scripts/generate-request-kinds.ts`, `bun test`, 
 
 ## Upstream (Cursor webhook)
 
-[`.github/workflows/upstream-watch.yml`](../.github/workflows/upstream-watch.yml) runs daily and **POSTs to your Cursor automation webhook**. The agent instructions live in Cursor (Automations UI), not in the workflow.
+[`.github/workflows/upstream-watch.yml`](../.github/workflows/upstream-watch.yml) runs daily, compares upstream `main` HEAD to [`.github/upstream-last-seen.sha`](../.github/upstream-last-seen.sha), and **POSTs the Cursor webhook only when they differ**. The agent instructions live in Cursor (Automations UI), not in the workflow.
 
 Edit upstream target in the workflow file:
 

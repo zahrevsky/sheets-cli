@@ -2,8 +2,8 @@
 /**
  * Print or write upstream default-branch HEAD to .github/upstream-last-seen.sha.
  *
- *   UPSTREAM_REPO=owner/name bun scripts/sync-upstream-sha.ts
- *   UPSTREAM_REPO=owner/name bun scripts/sync-upstream-sha.ts --write
+ *   UPSTREAM_REPO=owner/name bun scripts/sync-upstream-sha.ts --check   # JSON for CI
+ *   UPSTREAM_REPO=owner/name bun scripts/sync-upstream-sha.ts --write   # update .sha file
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -57,6 +57,50 @@ export function writeLastSeenSha(sha: string, path = LAST_SEEN_PATH): void {
   writeFileSync(path, `${sha.trim()}\n`, "utf8");
 }
 
+export type UpstreamCheckStatus = "unchanged" | "updates" | "bootstrap";
+
+export type UpstreamCheckResult = {
+  status: UpstreamCheckStatus;
+  upstreamHead: string;
+  lastSeen: string | null;
+  upstreamRepository: string;
+  upstreamBranch: string;
+};
+
+export function evaluateUpstreamCheck(
+  upstreamHead: string,
+  lastSeen: string | null,
+  upstreamRepository: string,
+  upstreamBranch: string
+): UpstreamCheckResult {
+  const head = upstreamHead.trim();
+  if (!lastSeen) {
+    return {
+      status: "bootstrap",
+      upstreamHead: head,
+      lastSeen: null,
+      upstreamRepository,
+      upstreamBranch,
+    };
+  }
+  if (lastSeen === head) {
+    return {
+      status: "unchanged",
+      upstreamHead: head,
+      lastSeen,
+      upstreamRepository,
+      upstreamBranch,
+    };
+  }
+  return {
+    status: "updates",
+    upstreamHead: head,
+    lastSeen,
+    upstreamRepository,
+    upstreamBranch,
+  };
+}
+
 async function main(): Promise<void> {
   const repository = process.env.UPSTREAM_REPO?.trim();
   if (!repository) {
@@ -64,6 +108,18 @@ async function main(): Promise<void> {
   }
   const branch = process.env.UPSTREAM_BRANCH?.trim() ?? "main";
   const sha = await fetchUpstreamHeadSha(repository, branch);
+
+  if (process.argv.includes("--check")) {
+    const result = evaluateUpstreamCheck(
+      sha,
+      readLastSeenSha(),
+      repository,
+      branch
+    );
+    console.log(JSON.stringify(result));
+    return;
+  }
+
   const write = process.argv.includes("--write");
 
   if (write) {
