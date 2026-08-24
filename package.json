@@ -18,7 +18,7 @@
     "@types/bun": "latest",
     "lefthook": "^2.0.12",
     "@typescript/native-preview": "^7.0.0-dev.20251215.1",
-    "ultracite": "6.4.1"
+    "ultracite": "7.10.6"
   },
   "peerDependencies": {
     "typescript": "^5"
